@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nashville LST Pipeline Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--cream:#F7F3EE;--white:#FDFCFB;--navy:#1C3557;--navy2:#274D7A;--gold:#9A7B3C;--gold2:#C9A84C;--rust:#8B3A2A;--slate:#4A5D72;--muted:#7A8A98;--rule:#D4CCBF;--text:#1A1A1A;--text2:#3D3D3D;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Source Serif 4',Georgia,serif;background:var(--cream);color:var(--text);padding:32px 24px;}
+.container{max-width:1360px;margin:0 auto;}
+.header{background:var(--navy);padding:44px 48px;box-shadow:0 4px 24px rgba(28,53,87,.18);margin-bottom:28px;text-align:center;}
+.header::before,.header::after{content:'';display:block;height:2px;background:var(--gold2);margin-bottom:20px;}
+.header::after{margin-top:20px;margin-bottom:0;}
+.header h1{font-family:'Playfair Display',serif;font-weight:700;font-size:2.6em;color:var(--white);letter-spacing:.01em;line-height:1.15;margin-bottom:12px;}
+.header p{color:rgba(255,255,255,.65);font-size:1em;font-style:italic;}
+.header p:last-child{font-size:.82em;color:rgba(255,255,255,.4);margin-top:6px;font-style:normal;letter-spacing:.06em;text-transform:uppercase;}
+.card{background:var(--white);border:1px solid var(--rule);padding:32px;margin-bottom:22px;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+.card h2{font-family:'Playfair Display',serif;font-weight:700;font-size:1.45em;color:var(--navy);margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid var(--navy);}
+.card h3{font-family:'Playfair Display',serif;font-weight:600;color:var(--navy);margin-bottom:14px;}
+.stat-box{background:var(--navy);color:var(--white);padding:22px;margin:12px 0;text-align:center;border-bottom:3px solid var(--gold2);}
+.stat-box.danger{background:var(--rust);border-bottom-color:#E8A090;}
+.stat-box.warn{background:#7A5C1E;border-bottom-color:var(--gold2);}
+.stat-box.cool{background:#1B4D6E;border-bottom-color:#7EC8E3;}
+.stat-box.green{background:#1B5E3B;border-bottom-color:#7EC89E;}
+.stat-box.purple{background:#4A2D6B;border-bottom-color:#C9A0E0;}
+.stat-value{font-family:'Playfair Display',serif;font-size:2.7em;font-weight:700;color:var(--gold2);margin-bottom:6px;line-height:1;}
+.stat-box.danger .stat-value{color:#F5C0B0;}
+.stat-box.cool .stat-value{color:#A8DCF0;}
+.stat-box.green .stat-value{color:#A8F0C8;}
+.stat-box.purple .stat-value{color:#D4B0F0;}
+.stat-label{font-size:.88em;color:rgba(255,255,255,.88);line-height:1.35;font-family:'Source Sans 3',sans-serif;}
+.stat-sublabel{font-size:.74em;color:rgba(255,255,255,.5);margin-top:5px;font-style:italic;}
+.plot-container{width:100%;height:420px;margin:14px 0;}
+.img-frame{width:100%;margin:16px 0;border:1px solid var(--rule);cursor:zoom-in;display:block;background:var(--cream);}
+.img-caption{font-size:.82em;color:var(--muted);font-style:italic;margin-top:6px;font-family:'Source Sans 3',sans-serif;}
+.source-note{font-size:.82em;color:var(--muted);font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid var(--rule);font-family:'Source Sans 3',sans-serif;}
+.info-box{background:#EEF3F9;border-left:4px solid var(--navy2);padding:14px 18px;margin:14px 0;font-size:.92em;color:var(--text2);}
+.warning-box{background:#FDF6EC;border-left:4px solid var(--gold);padding:14px 18px;margin:14px 0;font-size:.92em;color:var(--text2);}
+.success-box{background:#EDF4F0;border-left:4px solid #3B7A57;padding:14px 18px;margin:14px 0;font-size:.92em;color:var(--text2);}
+.tab-container{margin-bottom:20px;}
+.tab-buttons{display:flex;gap:4px;margin-bottom:22px;flex-wrap:wrap;border-bottom:2px solid var(--navy);}
+.tab-button{padding:10px 20px;background:var(--cream);border:1px solid var(--rule);border-bottom:none;color:var(--slate);cursor:pointer;font-family:'Source Sans 3',sans-serif;font-size:.9em;font-weight:600;transition:all .15s;position:relative;top:2px;letter-spacing:.02em;}
+.tab-button:hover{background:var(--white);color:var(--navy);}
+.tab-button.active{background:var(--navy);border-color:var(--navy);color:var(--white);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.view-buttons{display:flex;gap:6px;margin:16px 0;flex-wrap:wrap;}
+.view-button{padding:7px 16px;background:var(--cream);border:1px solid var(--rule);color:var(--slate);cursor:pointer;font-family:'Source Sans 3',sans-serif;font-size:.85em;font-weight:500;transition:all .15s;}
+.view-button:hover,.view-button.active{background:var(--navy);color:var(--white);border-color:var(--navy);}
+.view-content{display:none;}
+.view-content.active{display:block;}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-bottom:18px;}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:18px;}
+.detail-item{background:var(--cream);border-left:3px solid var(--rule);padding:16px;font-size:.9em;color:var(--text2);line-height:1.55;font-family:'Source Sans 3',sans-serif;}
+.detail-item strong{color:var(--navy);display:block;margin-bottom:6px;font-family:'Source Serif 4',serif;}
+.satellite-card{background:var(--white);border:1px solid var(--rule);padding:20px;border-top:4px solid var(--navy);}
+.satellite-card.goes{border-top-color:#e8593c;}
+.satellite-card.modis{border-top-color:#f4a23a;}
+.satellite-card.landsat{border-top-color:#4575b4;}
+.satellite-card.sentinel{border-top-color:#1d9e75;}
+.satellite-card h4{font-family:'Playfair Display',serif;font-size:1.1em;font-weight:700;margin-bottom:8px;}
+.sat-tag{display:inline-block;padding:3px 10px;font-size:.75em;font-family:'Source Sans 3',sans-serif;font-weight:600;margin:2px 2px 6px 0;letter-spacing:.04em;}
+.badge-orange{background:#FEF3E2;color:#9A4F00;}
+.badge-blue{background:#E6F1FB;color:#0C447C;}
+.badge-green{background:#EAF3DE;color:#27500A;}
+.cascade-list{list-style:none;padding-left:0;}
+.cascade-list li{padding:11px 14px;margin:6px 0;background:var(--cream);border-left:3px solid var(--navy);font-size:.9em;color:var(--text2);font-family:'Source Sans 3',sans-serif;line-height:1.5;}
+.cascade-list li strong{color:var(--navy);}
+/* Lightbox */
+#lightbox{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.88);z-index:9999;cursor:zoom-out;align-items:center;justify-content:center;}
+#lightbox.open{display:flex;}
+#lightbox-img{max-width:95%;max-height:95%;border:2px solid white;box-shadow:0 0 40px rgba(0,0,0,.6);}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>Nashville LST Pipeline v4.1</h1>
+  <p>10-meter Hourly Land Surface Temperature — Four-source Satellite Fusion</p>
+  <p>Landsat-8/9 · Sentinel-2 · GOES-16 · MODIS · Nashville Davidson County · JJA 2023</p>
+</div>
+
+<div class="card tab-container">
+  <div class="tab-buttons">
+    <button class="tab-button active" onclick="showTab('overview',this)">Overview</button>
+    <button class="tab-button" onclick="showTab('satellites',this)">Data Sources</button>
+    <button class="tab-button" onclick="showTab('stage1',this)">1. Landsat Label</button>
+    <button class="tab-button" onclick="showTab('stage2',this)">2. S2 + RF Pattern</button>
+    <button class="tab-button" onclick="showTab('stage3',this)">3. ampMap</button>
+    <button class="tab-button" onclick="showTab('stage4',this)">4. Temporal Anchor</button>
+    <button class="tab-button" onclick="showTab('stage5',this)">5. Formula & Output</button>
+    <button class="tab-button" onclick="showTab('versions',this)">Version History</button>
+  </div>
+</div>
+
+<!-- ══ OVERVIEW ══ -->
+<div id="overview" class="tab-content active">
+  <div class="grid-3">
+    <div class="card">
+      <h2>Spatial Resolution</h2>
+      <div class="stat-box green"><div class="stat-value">10 m</div><div class="stat-label">Final Output Pixel Size</div><div class="stat-sublabel">Downscaled from 1km GOES → 30m Landsat → 10m S2</div></div>
+      <div class="stat-box"><div class="stat-value">4</div><div class="stat-label">Satellite Data Sources Fused</div><div class="stat-sublabel">GOES-16 · MODIS · Landsat 8/9 · Sentinel-2</div></div>
+    </div>
+    <div class="card">
+      <h2>Temporal Coverage</h2>
+      <div class="stat-box cool"><div class="stat-value">9 hr/day</div><div class="stat-label">UTC 14–22 (CDT 09:00–17:00)</div><div class="stat-sublabel">Hourly output during daytime working hours</div></div>
+      <div class="stat-box"><div class="stat-value">279</div><div class="stat-label">GeoTIFF Files — July 2023</div><div class="stat-sublabel">31 days × 9 hours = 279 scenes</div></div>
+    </div>
+    <div class="card">
+      <h2>Key Innovation (v4.1)</h2>
+      <div class="stat-box purple"><div class="stat-value">ampMap</div><div class="stat-label">Pixel-level Diurnal Amplitude</div><div class="stat-sublabel">Water 1.5K → Dense built 11K</div></div>
+      <div class="stat-box warn"><div class="stat-value">100%</div><div class="stat-label">Temporal Coverage via 3-level Gap-fill</div><div class="stat-sublabel">GOES → MODIS+cos → JJA+cos fallback</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Pipeline Architecture</h2>
+    <img src="step1_pipeline_overview.png" class="img-frame" onclick="openImg(this.src)" onerror="imgErr(this,'step1_pipeline_overview.png')">
+    <p class="img-caption">Four-source fusion: GOES-16 and MODIS provide hourly temporal anchors; Landsat provides 30m thermal truth for training; Sentinel-2 carries spatial detail to 10m.</p>
+    <div class="info-box"><strong>Reading this diagram:</strong> GOES-16 and MODIS anchor the time dimension (when). Landsat provides thermal truth for training. Sentinel-2 brings spatial resolution to 10m. All four converge in the v4.1 formula: <code>LST(x,y,t) = pattern + ampMap×cos(h) + anchor correction</code>.</div>
+  </div>
+</div>
+
+<!-- ══ DATA SOURCES ══ -->
+<div id="satellites" class="tab-content">
+  <div class="card">
+    <h2>Four Satellite Data Sources</h2>
+    <div class="grid-2" style="margin-bottom:22px;">
+      <div class="satellite-card goes">
+        <h4 style="color:#e8593c;">GOES-16</h4>
+        <span class="sat-tag badge-orange">Geostationary</span><span class="sat-tag badge-orange">Temporal anchor</span><span class="sat-tag badge-orange">1km · hourly</span>
+        <ul style="font-size:.88em;color:var(--text2);font-family:'Source Sans 3',sans-serif;line-height:1.8;padding-left:16px;margin-top:8px;">
+          <li>Orbit: 35,800 km above equator, stationary</li>
+          <li>Band: CMI C13 (10.3 μm thermal IR)</li>
+          <li>Cadence: every 5–10 minutes, full CONUS</li>
+          <li>Role: Level 1 hourly temperature anchor</li>
+          <li>Limitation: 1km spatial, no emissivity correction</li>
+        </ul>
+      </div>
+      <div class="satellite-card modis">
+        <h4 style="color:#c47f1a;">MODIS MOD11A1</h4>
+        <span class="sat-tag badge-orange">Polar orbit</span><span class="sat-tag badge-orange">Fallback anchor</span><span class="sat-tag badge-orange">1km · daily</span>
+        <ul style="font-size:.88em;color:var(--text2);font-family:'Source Sans 3',sans-serif;line-height:1.8;padding-left:16px;margin-top:8px;">
+          <li>Orbit: Terra satellite, ~705 km altitude</li>
+          <li>Overpass: ~10:30 local solar time daily</li>
+          <li>Product: LST_Day_1km (emissivity-corrected)</li>
+          <li>Role: Level 2 fallback when GOES invalid</li>
+          <li>Limitation: Single daily snapshot, 1km resolution</li>
+        </ul>
+      </div>
+      <div class="satellite-card landsat">
+        <h4 style="color:#4575b4;">Landsat 8 + 9</h4>
+        <span class="sat-tag badge-blue">Polar orbit</span><span class="sat-tag badge-blue">Training label</span><span class="sat-tag badge-blue">30m · 8-day</span>
+        <ul style="font-size:.88em;color:var(--text2);font-family:'Source Sans 3',sans-serif;line-height:1.8;padding-left:16px;margin-top:8px;">
+          <li>Orbit: ~705 km, 16-day each (combined: ~8-day)</li>
+          <li>Band: ST_B10 (10.6–11.2 μm, 30m direct observation)</li>
+          <li>Product: C02 T1 L2 (atmospherically corrected)</li>
+          <li>Role: Ground truth label for RF model training</li>
+          <li>Key advantage: ~110,000 pixels vs ~100 for MODIS in AOI</li>
+        </ul>
+      </div>
+      <div class="satellite-card sentinel">
+        <h4 style="color:#1d9e75;">Sentinel-2 A/B</h4>
+        <span class="sat-tag badge-green">Polar orbit</span><span class="sat-tag badge-green">Spatial features</span><span class="sat-tag badge-green">10m · 5-day</span>
+        <ul style="font-size:.88em;color:var(--text2);font-family:'Source Sans 3',sans-serif;line-height:1.8;padding-left:16px;margin-top:8px;">
+          <li>Orbit: Two satellites (A+B), 5-day combined revisit</li>
+          <li>Bands used: 10 spectral + 6 indices = 16 features</li>
+          <li>Product: S2_SR_HARMONIZED (surface reflectance)</li>
+          <li>Role: 10m spatial features for RF + ampMap land cover</li>
+          <li>No thermal band — LST inferred via land cover proxies</li>
+        </ul>
+      </div>
+    </div>
+    <div class="info-box"><strong>Why fusion is necessary:</strong> No single sensor provides both 10m spatial resolution AND hourly temporal resolution. GOES has the time but not the space; Landsat has the thermal truth but passes overhead only once per week. v4.1 fuses all four to get the best of each dimension.</div>
+  </div>
+
+  <div class="card">
+    <h2>Spectral Bands — Optical/NIR/SWIR for Land Cover, TIR for LST</h2>
+    <div id="spectralPlot" class="plot-container"></div>
+    <div class="source-note">Thermal IR bands (GOES CMI C13, Landsat ST_B10) measure emitted radiation for direct LST. Sentinel-2 optical/SWIR bands detect land cover types that correlate with surface temperature via the RF model.</div>
+  </div>
+</div>
+
+<!-- ══ STAGE 1 ══ -->
+<div id="stage1" class="tab-content">
+  <div class="card">
+    <h2>Stage 1 — Landsat ST_B10: The 30m Training Label</h2>
+    <div class="warning-box"><strong>Core problem solved by v4:</strong> Earlier versions (v3) used MODIS 1km as training labels. Inside the 100 km² Downtown AOI there are only ~100 MODIS pixels with almost no spatial variance — the RF learned only the mean. Landsat 30m gives ~110,000 pixels with real spatial thermal structure (std ≈ 3.7K).</div>
+    <img src="step2_landsat_label.png" class="img-frame" onclick="openImg(this.src)" onerror="imgErr(this,'step2_landsat_label.png')">
+    <p class="img-caption">Left: Temperature distribution histogram — JJA 2023 median composite over Downtown Nashville sample. Right: Data source summary card with key validation metrics.</p>
+    <div class="grid-2" style="margin-top:16px;">
+      <div class="detail-item"><strong>Processing chain</strong>Landsat 8+9 merged → cloud mask (QA_PIXEL bits 1,3,4) → radiometric scaling (ST_B10 × 0.00341802 + 149.0 → K) → JJA median composite → reproject EPSG:32616 30m</div>
+      <div class="detail-item"><strong>Validation threshold</strong>Spatial std must exceed 1K to confirm the RF has meaningful signal to learn. Actual: ~3.7K. This is the std across all Downtown pixels — much larger than MODIS 1km (~0.3K in the same area).</div>
+    </div>
+    <div class="source-note">Landsat 8 (LC08) + Landsat 9 (LC09), Collection 2 Tier 1 Level 2. Cloud cover filter: &lt;30% per scene. Training window: JJA 2023 (June–August).</div>
+  </div>
+</div>
+
+<!-- ══ STAGE 2 ══ -->
+<div id="stage2" class="tab-content">
+  <div class="card">
+    <h2>Stage 2 — Sentinel-2 Features + Random Forest → 10m Spatial Pattern</h2>
+    <img src="step3_s2_rf_pattern.png" class="img-frame" onclick="openImg(this.src)" onerror="imgErr(this,'step3_s2_rf_pattern.png')">
+    <p class="img-caption">Left: S2 feature space scatter plot — NDVI vs NDBI for Downtown Nashville, coloured by NDVI−NDBI (green = vegetation, red = impervious). Right: RF feature importance — NDBI and UTFVI dominate as primary predictors of urban LST.</p>
+    <div class="grid-3" style="margin-top:16px;">
+      <div class="stat-box"><div class="stat-value">16</div><div class="stat-label">S2 Input Features</div><div class="stat-sublabel">10 bands + NDVI, NDBI, MNDWI, NDRE, BSI, UTFVI</div></div>
+      <div class="stat-box cool"><div class="stat-value">1,500</div><div class="stat-label">Training Sample Points</div><div class="stat-sublabel">Random, Downtown AOI, seed=42, scale=30m</div></div>
+      <div class="stat-box green"><div class="stat-value">150 trees</div><div class="stat-label">Random Forest Size</div><div class="stat-sublabel">variablesPerSplit=5, REGRESSION mode</div></div>
+    </div>
+    <div class="info-box"><strong>Key design choice:</strong> Prediction is applied at native 10m S2 resolution without forcing reproject — GEE computes lazily per export tile, avoiding the browser-side OOM that crashed earlier versions. Training and PATTERN_MEAN use Downtown AOI at scale=500m.</div>
+    <div class="source-note">Sentinel-2 S2_SR_HARMONIZED, JJA 2023 median composite, cloud filter: CLOUDY_PIXEL_PERCENTAGE &lt;30%. Cloud mask branches on 2023-02-28 for MSK_CLASSI vs QA60.</div>
+  </div>
+</div>
+
+<!-- ══ STAGE 3 ══ -->
+<div id="stage3" class="tab-content">
+  <div class="card">
+    <h2>Stage 3 — ampMap: Pixel-level Diurnal Amplitude (v4.1 Core Innovation)</h2>
+    <div class="warning-box"><strong>v4 limitation fixed by v4.1:</strong> v4 used a single scalar DIURNAL_AMP=5K for all pixels. A concrete parking lot and a city park received the same hourly temperature swing — physically incorrect. v4.1 derives per-pixel amplitude from S2 land cover indices.</div>
+    <img src="step4_ampmap.png" class="img-frame" onclick="openImg(this.src)" onerror="imgErr(this,'step4_ampmap.png')">
+    <p class="img-caption">Left: Land cover distribution in Downtown Nashville by ampMap class. Right: Per-pixel diurnal cycle curves — dense built surface (11K, dark red) swings nearly 4× more than water body (1.5K, dark blue) between night and peak afternoon.</p>
+    <table style="width:100%;border-collapse:collapse;font-family:'Source Sans 3',sans-serif;font-size:.9em;margin:16px 0;">
+      <tr style="background:var(--navy);color:white;"><th style="padding:10px;text-align:left;">Land Cover</th><th style="padding:10px;">S2 Condition</th><th style="padding:10px;">Amplitude (K)</th><th style="padding:10px;">Physical Basis</th></tr>
+      <tr style="background:var(--cream);"><td style="padding:10px;">Water body</td><td style="padding:10px;text-align:center;">MNDWI &gt; 0.10</td><td style="padding:10px;text-align:center;color:#4575b4;font-weight:bold;">1.5 K</td><td style="padding:10px;">High heat capacity, evaporative cooling</td></tr>
+      <tr style="background:var(--white);"><td style="padding:10px;">Dense vegetation</td><td style="padding:10px;text-align:center;">NDVI &gt; 0.60</td><td style="padding:10px;text-align:center;color:#74add1;font-weight:bold;">2.5 K</td><td style="padding:10px;">Evapotranspiration, canopy shading</td></tr>
+      <tr style="background:var(--cream);"><td style="padding:10px;">Vegetation</td><td style="padding:10px;text-align:center;">NDVI &gt; 0.45</td><td style="padding:10px;text-align:center;color:#a8d0a8;font-weight:bold;">3.5 K</td><td style="padding:10px;">Partial evapotranspiration</td></tr>
+      <tr style="background:var(--white);"><td style="padding:10px;">Mixed urban</td><td style="padding:10px;text-align:center;">(default)</td><td style="padding:10px;text-align:center;color:#c9a84c;font-weight:bold;">6.0 K</td><td style="padding:10px;">Mixed impervious/vegetation</td></tr>
+      <tr style="background:var(--cream);"><td style="padding:10px;">Impervious surface</td><td style="padding:10px;text-align:center;">NDBI &gt; 0.15</td><td style="padding:10px;text-align:center;color:#f46d43;font-weight:bold;">9.0 K</td><td style="padding:10px;">Low albedo, high thermal inertia</td></tr>
+      <tr style="background:var(--white);"><td style="padding:10px;">Dense built / parking</td><td style="padding:10px;text-align:center;">NDBI &gt; 0.30</td><td style="padding:10px;text-align:center;color:#d73027;font-weight:bold;">11.0 K</td><td style="padding:10px;">Asphalt dominant, no shade</td></tr>
+    </table>
+    <div class="success-box"><strong>Validation check:</strong> UTC19 spatial std should exceed UTC14 spatial std — peak hour shows maximum urban-rural LST contrast. If std₁₉ &lt; std₁₄, the ampMap thresholds need adjustment.</div>
+    <div class="source-note">Amplitude values calibrated against Zhao et al. (2020) and Imhoff et al. (2010) urban diurnal range measurements. Next step: calibrate against Nashville ASOS BNA station observed diurnal ranges.</div>
+  </div>
+</div>
+
+<!-- ══ STAGE 4 ══ -->
+<div id="stage4" class="tab-content">
+  <div class="card">
+    <h2>Stage 4 — Temporal Anchor: Three-level Gap-fill Chain</h2>
+    <img src="step5_temporal_anchor.png" class="img-frame" onclick="openImg(this.src)" onerror="imgErr(this,'step5_temporal_anchor.png')">
+    <p class="img-caption">Left: Three-level gap-fill decision chain — GOES-16 is primary; MODIS + cosine offset is fallback; JJA climatological mean + cosine is last resort. Right: JJA 2023 mean diurnal anchor time series over Nashville (CDT 09:00–17:00).</p>
+    <div class="grid-3" style="margin-top:16px;">
+      <div class="stat-box"><div class="stat-value">L1: GOES</div><div class="stat-label">Primary — Hourly Brightness Temperature</div><div class="stat-sublabel">Valid if 270K &lt; anchor &lt; 340K</div></div>
+      <div class="stat-box warn"><div class="stat-value">L2: MODIS</div><div class="stat-label">Fallback — Daily LST + Cosine Offset</div><div class="stat-sublabel">T(h) = T_MODIS − Δ(16) + Δ(h)</div></div>
+      <div class="stat-box danger"><div class="stat-value">L3: JJA</div><div class="stat-label">Last Resort — Climatological Mean</div><div class="stat-sublabel">Always valid · no day-to-day weather signal</div></div>
+    </div>
+    <div class="grid-2" style="margin-top:4px;">
+      <div class="detail-item"><strong>GOES BT → LST conversion</strong>CMI C13 (10.3 μm): scale DN × 0.1 → brightness temperature BT. Apply Planck correction: LST = BT + BT²/b × ln(ε), where b = 14388/10.3 = 1396K, ε = 0.97. v3 bug: b was 139.6 → ~2K underestimate, fixed in v4.</div>
+      <div class="detail-item"><strong>Cosine diurnal model</strong>Δ(h) = AMP × cos(2π × (h − H_PEAK) / 24). H_PEAK = UTC19 = CDT 14:00. AMP_SCALAR = 6.0K used only for MODIS L2 fallback mean calculation — actual spatial variation handled per-pixel by ampMap.</div>
+    </div>
+    <div class="warning-box"><strong>Why L3 is last resort:</strong> JJA mean + cosine has no day-to-day weather signal. It will smooth out actual hot/cool anomaly days. Script 2 (temporal audit) identifies L3 days so those outputs can be flagged in the cascade model.</div>
+  </div>
+</div>
+
+<!-- ══ STAGE 5 ══ -->
+<div id="stage5" class="tab-content">
+  <div class="card">
+    <h2>Stage 5 — v4.1 Final Formula</h2>
+    <img src="step6_formula.png" class="img-frame" onclick="openImg(this.src)" onerror="imgErr(this,'step6_formula.png')">
+    <p class="img-caption">Three-term decomposition: spatial pattern (blue) + pixel-adaptive diurnal deformation (green) + GOES anchor correction (red) = final 10m hourly LST output (purple).</p>
+    <div class="grid-3" style="margin-top:16px;">
+      <div class="detail-item"><strong>Term 1 — lst_pattern(x,y)</strong>Static JJA spatial pattern from S2→RF. Captures which street blocks are hotter than others. Does not change with time — encodes the city's thermal "fingerprint".</div>
+      <div class="detail-item"><strong>Term 2 — ampMap(x,y) × cos(h)</strong>Each pixel deforms at its own rate. Parking lots (11K) peak 9K higher than water (1.5K) at UTC19. This is the v4.1 innovation — replaces a scalar uniform offset.</div>
+      <div class="detail-item"><strong>Term 3 — anchor correction</strong>Scalar. Forces spatial mean to match GOES-observed temperature for that hour. Injects real weather signal without changing spatial structure.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Final Output — Nashville 10m LST Map</h2>
+    <img src="step8_final_output.png" class="img-frame" onclick="openImg(this.src)" onerror="imgErr(this,'step8_final_output.png')">
+    <p class="img-caption">Nashville Davidson County — JJA 2023 · UTC 19:00 (CDT 14:00 peak hour). Fusion: Landsat-8/9 + Sentinel-2 + GOES-16 + MODIS. 10m × 10m · EPSG:32616 · Float32 GeoTIFF.</p>
+    <div class="grid-3" style="margin-top:16px;">
+      <div class="stat-box"><div class="stat-value">31.6°C</div><div class="stat-label">Mean LST — Full Nashville UTC19</div><div class="stat-sublabel">JJA 2023 summer average</div></div>
+      <div class="stat-box cool"><div class="stat-value">4.2 K</div><div class="stat-label">Spatial Standard Deviation</div><div class="stat-sublabel">std₁₉ &gt; std₁₄ — ampMap confirmed working</div></div>
+      <div class="stat-box danger"><div class="stat-value">46.4°C</div><div class="stat-label">Maximum Pixel (P99)</div><div class="stat-sublabel">Dense impervious surface / rooftops</div></div>
+    </div>
+    <div class="success-box"><strong>Cascade model integration:</strong> Each of the 279 GeoTIFFs is loaded with rasterio → numpy array → thresholded at 45°C → binary heat stress mask passed to NashvilleCascadeModel as spatially explicit trigger layer per hour. Peak stress area at UTC19 ≈ 14.8% of Nashville pixels.</div>
+    <div class="cascade-list" style="margin-top:16px;">
+      <li><strong>Transportation trigger:</strong> LST &gt;60°C → asphalt softening → road degradation cascade</li>
+      <li><strong>Water systems trigger:</strong> Subsurface T = f(LST surface) → pipe stress → +30–50% failure rate in cast-iron mains</li>
+      <li><strong>Buildings trigger:</strong> LST + heat island radius → HVAC demand +10–40% → failure rate doubles at +20% overcapacity</li>
+      <li><strong>Electrical grid trigger:</strong> Soil T at cable depth = f(LST) → cable ampacity −4–7% per 5°C</li>
+      <li><strong>Public health trigger:</strong> Spatial extent of LST &gt;45°C × population density → heat illness risk index</li>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VERSION HISTORY ══ -->
+<div id="versions" class="tab-content">
+  <div class="card">
+    <h2>Pipeline Version History</h2>
+    <div id="versionPlot" class="plot-container"></div>
+    <div class="grid-2" style="margin-top:16px;">
+      <div class="detail-item"><strong>v1 — Single day, Davidson County</strong>GOES+MODIS→1km→Landsat 30m→S2 10m (tiled). Failure: Davidson County at 10m = ~13.5B pixels → GEE OOM crash immediately.</div>
+      <div class="detail-item"><strong>v2 — Downtown AOI (100 km²)</strong>Shrink to Downtown bounding box. Fix ee.Feature.style error → ee.FeatureCollection([ee.Feature(...)]). Still single-day, no temporal dimension.</div>
+      <div class="detail-item"><strong>v3 — Monthly composite + hourly decoupling</strong>Introduced spatial × temporal decoupled architecture (still used in v4.1). Failure: MODIS 1km labels → ~100 pixels → RF learns mean → uniform output, spatial pattern meaningless.</div>
+      <div class="detail-item"><strong>v4 — Landsat ST_B10 training label</strong>Replace MODIS with Landsat 30m direct thermal observation. Add 3-level gap-fill. Fix Planck constant (b: 139.6 → 1396). All-scalar formula: LST = pattern + [anchor − mean]. Spatial heterogeneity restored (std ~3.7K).</div>
+      <div class="detail-item"><strong>v4.1 — ampMap pixel-level amplitude (current)</strong>Replace scalar DIURNAL_AMP with per-pixel ampMap from S2 land cover indices. Spatial pattern now deforms with time — parking lots heat faster than parks. std_UTC19 &gt; std_UTC14 confirmed.</div>
+      <div class="detail-item"><strong>Next — Data-driven calibration</strong>Replace rule-based ampMap with multi-temporal Landsat-derived actual diurnal ranges. Validate against Nashville ASOS BNA station. Extend to full JJA (June+August 2023). Connect to NashvilleCascadeModel.</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="">
+</div>
+
+<script>
+function showTab(t,btn){
+  document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab-button').forEach(e=>e.classList.remove('active'));
+  document.getElementById(t).classList.add('active');
+  btn.classList.add('active');
+}
+function showView(sec,v,btn){
+  document.querySelectorAll('#'+sec+' .view-content').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('#'+sec+' .view-button').forEach(e=>e.classList.remove('active'));
+  document.getElementById(v).classList.add('active');
+  btn.classList.add('active');
+}
+function openImg(src){
+  document.getElementById('lightbox-img').src=src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
+function imgErr(el,name){
+  const d=document.createElement('div');
+  d.className='warning-box';
+  d.innerHTML='<strong>Image not found:</strong> <code>'+name+'</code> — put this file in the same folder as the HTML and reload.';
+  el.replaceWith(d);
+}
+
+const cfg={responsive:true};
+const bg={plot_bgcolor:'#F7F3EE',paper_bgcolor:'#FDFCFB',font:{color:'#1A1A1A',family:'Source Serif 4,Georgia,serif'}};
+
+// Spectral bands (Data Sources tab — no image equivalent, keep as chart)
+Plotly.newPlot('spectralPlot',[
+  {x:[0.49,0.56,0.665,0.705,0.74,0.783,0.842,0.865,1.61,2.19],
+   y:[8,8,8,6,6,7,9,7,9,9],name:'Sentinel-2 bands used',type:'bar',
+   marker:{color:'#1d9e75'},text:['B2','B3','B4','B5','B6','B7','B8','B8A','B11','B12'],
+   textposition:'outside',width:0.05},
+  {x:[0.485,0.555,0.645,0.858,1.64,2.13,11.0],y:[7,7,7,8,8,8,10],
+   name:'Landsat bands (reference)',type:'scatter',mode:'markers',
+   marker:{color:'#4575b4',size:14,symbol:'diamond'}},
+  {x:[10.3],y:[10],name:'GOES CMI C13',type:'scatter',mode:'markers',
+   marker:{color:'#e8593c',size:20,symbol:'star'}}
+],{title:'Spectral Coverage — Optical/NIR/SWIR for Land Cover · TIR for LST',
+  xaxis:{title:'Wavelength (μm)',range:[0.4,12]},
+  yaxis:{title:'Relative importance (indicative)',range:[0,12]},
+  shapes:[
+    {type:'rect',x0:0.45,x1:0.7,y0:0,y1:11,fillcolor:'#abd9e9',opacity:.15,line:{width:0}},
+    {type:'rect',x0:0.7,x1:1.0,y0:0,y1:11,fillcolor:'#a8d0a8',opacity:.15,line:{width:0}},
+    {type:'rect',x0:1.5,x1:2.4,y0:0,y1:11,fillcolor:'#fee090',opacity:.2,line:{width:0}},
+    {type:'rect',x0:9.5,x1:12,y0:0,y1:11,fillcolor:'#f46d43',opacity:.2,line:{width:0}}
+  ],
+  annotations:[
+    {x:0.58,y:11.3,text:'VIS',showarrow:false,font:{size:10,color:'#4575b4'}},
+    {x:0.85,y:11.3,text:'NIR',showarrow:false,font:{size:10,color:'#1a9850'}},
+    {x:1.85,y:11.3,text:'SWIR',showarrow:false,font:{size:10,color:'#9a7b3c'}},
+    {x:10.8,y:11.3,text:'TIR',showarrow:false,font:{size:10,color:'#e8593c'}}
+  ],
+  ...bg,height:420,legend:{x:.01,y:.98}},cfg);
+
+// Version history chart
+Plotly.newPlot('versionPlot',[
+  {x:['v1','v2','v3','v4','v4.1'],
+   y:[0,0,0.3,3.7,4.2],name:'Spatial std (K)',type:'bar',
+   marker:{color:['#e74c3c','#e67e22','#f39c12','#2ecc71','#1d9e75']},
+   text:['OOM crash','0K uniform','0.3K fail','3.7K ✓','4.2K ✓'],textposition:'outside'},
+  {x:['v1','v2','v3','v4','v4.1'],y:[0,0,0,1,9],
+   name:'Hourly outputs/day',type:'scatter',mode:'lines+markers',yaxis:'y2',
+   line:{color:'#4575b4',width:3},marker:{size:14}}
+],{title:'Pipeline Evolution — Spatial Quality and Temporal Resolution by Version',
+  yaxis:{title:'Spatial Std (K)',range:[0,5.5]},
+  yaxis2:{title:'Hourly outputs per day',overlaying:'y',side:'right',range:[-0.5,11]},
+  shapes:[{type:'line',xref:'paper',yref:'y',x0:0,y0:1,x1:1,y1:1,
+    line:{color:'#f39c12',width:1.5,dash:'dash'}}],
+  annotations:[{x:'v2',y:1.2,text:'1K min threshold',xref:'x',yref:'y',showarrow:false,font:{color:'#c8860a',size:10}}],
+  ...bg,height:340,legend:{x:.01,y:.98}},cfg);
+</script>
+</body>
+</html>

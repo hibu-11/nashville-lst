@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Cascade Effects Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --cream:   #F7F3EE;
+        --white:   #FDFCFB;
+        --navy:    #1C3557;
+        --navy2:   #274D7A;
+        --gold:    #9A7B3C;
+        --gold2:   #C9A84C;
+        --rust:    #8B3A2A;
+        --rust2:   #B04B38;
+        --slate:   #4A5D72;
+        --muted:   #7A8A98;
+        --rule:    #D4CCBF;
+        --text:    #1A1A1A;
+        --text2:   #3D3D3D;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'Source Serif 4', Georgia, serif;
+        background: var(--cream);
+        color: var(--text);
+        padding: 32px 24px;
+    }
+    .container { max-width: 1360px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .header {
+        background: var(--navy);
+        padding: 44px 48px;
+        border-radius: 0;
+        box-shadow: 0 4px 24px rgba(28,53,87,0.18);
+        margin-bottom: 28px;
+        text-align: center;
+        position: relative;
+    }
+    .header::before, .header::after {
+        content: '';
+        display: block;
+        height: 2px;
+        background: var(--gold2);
+        margin-bottom: 20px;
+    }
+    .header::after { margin-top: 20px; margin-bottom: 0; }
+    .header h1 {
+        font-family: 'Playfair Display', 'Times New Roman', serif;
+        font-weight: 700;
+        font-size: 2.6em;
+        color: var(--white);
+        letter-spacing: 0.01em;
+        line-height: 1.15;
+        margin-bottom: 12px;
+    }
+    .header p { color: rgba(255,255,255,0.65); font-size: 1em; font-style: italic; }
+    .header p:last-child { font-size: 0.82em; color: rgba(255,255,255,0.4); margin-top: 6px; font-style: normal; letter-spacing: 0.06em; text-transform: uppercase; }
+
+    /* ── Cards ── */
+    .card {
+        background: var(--white);
+        border-radius: 0;
+        border: 1px solid var(--rule);
+        padding: 32px;
+        margin-bottom: 22px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .card h2 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 700;
+        font-size: 1.45em;
+        color: var(--navy);
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--navy);
+        letter-spacing: 0.01em;
+    }
+
+    /* ── Stat boxes ── */
+    .stat-box {
+        background: var(--navy);
+        color: var(--white);
+        padding: 22px;
+        border-radius: 0;
+        margin: 12px 0;
+        text-align: center;
+        border-bottom: 3px solid var(--gold2);
+    }
+    .stat-box.danger { background: var(--rust); border-bottom-color: #E8A090; }
+    .stat-box.warn   { background: #7A5C1E; border-bottom-color: var(--gold2); }
+    .stat-box.cool   { background: #1B4D6E; border-bottom-color: #7EC8E3; }
+    .stat-box.purple { background: #4A2D6B; border-bottom-color: #C9A0E0; }
+    .stat-value {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.7em;
+        font-weight: 700;
+        color: var(--gold2);
+        margin-bottom: 6px;
+        line-height: 1;
+    }
+    .stat-box.danger .stat-value { color: #F5C0B0; }
+    .stat-box.warn   .stat-value { color: var(--gold2); }
+    .stat-box.cool   .stat-value { color: #A8DCF0; }
+    .stat-box.purple .stat-value { color: #D4B0F0; }
+    .stat-label    { font-size: 0.88em; color: rgba(255,255,255,0.88); line-height: 1.35; font-family: 'Source Sans 3', sans-serif; }
+    .stat-sublabel { font-size: 0.74em; color: rgba(255,255,255,0.5); margin-top: 5px; font-style: italic; }
+
+    /* ── Plots ── */
+    .plot-container { width: 100%; height: 450px; margin: 14px 0; }
+
+    /* ── Info boxes ── */
+    .source-note {
+        font-size: 0.82em; color: var(--muted);
+        font-style: italic;
+        margin-top: 10px; padding-top: 10px;
+        border-top: 1px solid var(--rule);
+        font-family: 'Source Sans 3', sans-serif;
+    }
+    .warning-box {
+        background: #FDF6EC;
+        border-left: 4px solid var(--gold);
+        padding: 14px 18px; margin: 14px 0;
+        font-size: 0.92em; color: var(--text2);
+        font-family: 'Source Serif 4', serif;
+    }
+    .success-box {
+        background: #EDF4F0;
+        border-left: 4px solid #3B7A57;
+        padding: 14px 18px; margin: 14px 0;
+        font-size: 0.92em; color: var(--text2);
+    }
+    .info-box {
+        background: #EEF3F9;
+        border-left: 4px solid var(--navy2);
+        padding: 14px 18px; margin: 14px 0;
+        font-size: 0.92em; color: var(--text2);
+    }
+
+    /* ── Tabs ── */
+    .tab-container { margin-bottom: 20px; }
+    .tab-buttons { display: flex; gap: 4px; margin-bottom: 22px; flex-wrap: wrap; border-bottom: 2px solid var(--navy); padding-bottom: 0; }
+    .tab-button {
+        padding: 10px 22px;
+        background: var(--cream);
+        border: 1px solid var(--rule);
+        border-bottom: none;
+        color: var(--slate);
+        border-radius: 0;
+        cursor: pointer;
+        font-family: 'Source Sans 3', sans-serif;
+        font-size: 0.92em;
+        font-weight: 600;
+        transition: all 0.15s ease;
+        position: relative;
+        top: 2px;
+        letter-spacing: 0.02em;
+    }
+    .tab-button:hover { background: var(--white); color: var(--navy); }
+    .tab-button.active {
+        background: var(--navy);
+        border-color: var(--navy);
+        color: var(--white);
+        top: 2px;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── View buttons ── */
+    .view-buttons { display: flex; gap: 6px; margin: 16px 0; flex-wrap: wrap; }
+    .view-button {
+        padding: 7px 16px;
+        background: var(--cream);
+        border: 1px solid var(--rule);
+        color: var(--slate);
+        border-radius: 0;
+        cursor: pointer;
+        font-family: 'Source Sans 3', sans-serif;
+        font-size: 0.85em;
+        font-weight: 500;
+        transition: all 0.15s ease;
+    }
+    .view-button:hover { background: var(--navy); color: var(--white); border-color: var(--navy); }
+    .view-button.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
+    .view-content { display: none; }
+    .view-content.active { display: block; }
+
+    /* ── Grids ── */
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-bottom: 18px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-bottom: 18px; }
+
+    /* ── Cascade list ── */
+    .cascade-list { list-style: none; padding-left: 0; }
+    .cascade-list li {
+        padding: 11px 14px; margin: 6px 0;
+        background: var(--cream);
+        border-left: 3px solid var(--navy);
+        font-size: 0.9em; color: var(--text2);
+        font-family: 'Source Sans 3', sans-serif;
+        line-height: 1.5;
+    }
+    .cascade-list li strong { color: var(--navy); }
+
+    /* ── Detail grid ── */
+    .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 16px 0; }
+    .detail-item {
+        background: var(--cream);
+        border-left: 3px solid var(--rule);
+        padding: 16px; font-size: 0.9em;
+        color: var(--text2); line-height: 1.55;
+        font-family: 'Source Sans 3', sans-serif;
+    }
+    .detail-item strong { color: var(--navy); display: block; margin-bottom: 6px; font-family: 'Source Serif 4', serif; }
+
+    /* ── Script callout (hidden) ── */
+    .script-callout { display: none; }
+
+    /* ── Misc ── */
+    .highlight-number { font-family: 'Playfair Display', serif; font-size: 1.6em; font-weight: 700; color: var(--navy); display: inline-block; margin-right: 6px; }
+    .flow-arrow { text-align: center; font-size: 2em; color: var(--navy); margin: 4px 0; }
+    h3 { font-family: 'Playfair Display', serif; font-weight: 600; }
+    h4 { font-family: 'Playfair Display', serif; font-weight: 600; }
+
+    /* ── Cross section ── */
+    .cross-section {
+        position: relative; height: 400px;
+        background: linear-gradient(to bottom,
+            #B8D4E8 0%, #B8D4E8 12%,
+            #3D3D3D 12%, #3D3D3D 17%,
+            #8B7355 17%, #654321 45%,
+            #8B7355 45%, #A0826D 100%);
+        border-radius: 0; overflow: hidden;
+        border: 1px solid var(--rule);
+    }
+    .infrastructure-item {
+        position: absolute; padding: 8px 12px;
+        border-radius: 0; font-weight: bold;
+        font-size: 0.82em; border: 1px solid rgba(255,255,255,0.4);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3); color: white;
+    }
+    .depth-marker {
+        position: absolute; left: 10px; width: 55px;
+        text-align: right; padding-right: 8px;
+        font-size: 0.78em; font-weight: bold; color: white;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    }
+    .temp-label {
+        position: absolute; right: 105px;
+        background: rgba(253,252,251,0.95);
+        padding: 3px 8px;
+        font-size: 0.78em; font-weight: bold; color: var(--navy);
+        border: 1px solid var(--rule);
+    }
+</style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <h1>Infrastructure Cascade Effects Dashboard</h1>
+        <p>Temperature-Induced Transportation Failures and Multi-System Impacts in Nashville</p>
+        <p style="font-size:0.9em;color:#999;margin-top:8px;">Based on 40+ Peer-Reviewed Sources | Nashville Infrastructure Analysis</p>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="card tab-container">
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="showMainTab('overview',this)">Overview</button>
+            <button class="tab-button" onclick="showMainTab('transportation',this)">1. Transportation</button>
+            <button class="tab-button" onclick="showMainTab('water',this)">2. Water Systems</button>
+            <button class="tab-button" onclick="showMainTab('buildings',this)">3. Buildings</button>
+            <button class="tab-button" onclick="showMainTab('electrical',this)">4. Electrical Grid</button>
+            <button class="tab-button" onclick="showMainTab('economics',this)">5. Economics</button>
+            <button class="tab-button" onclick="showMainTab('publichealth',this)">6. Public Health</button>
+        </div>
+    </div>
+
+    <!-- ══════════════════ OVERVIEW ══════════════════ -->
+    <div id="overview" class="tab-content active">
+        <div class="grid-3">
+            <div class="card">
+                <h2>Temperature Cascade</h2>
+                <div class="stat-box">
+                    <div class="stat-value">8–12°C</div>
+                    <div class="stat-label">Subsurface Temperature Rise from Hot Pavement</div>
+                    <div class="stat-sublabel">Herb et al. (2008) Journal of Hydrology</div>
+                </div>
+                <div class="script-callout">
+                    <div class="label">Key Point</div>
+                    Pavement can reach 60–65°C on a hot day — nearly twice the air temperature. That heat doesn't stay on the surface.
+                </div>
+            </div>
+            <div class="card">
+                <h2>System Vulnerability</h2>
+                <div class="stat-box danger">
+                    <div class="stat-value">50–70%</div>
+                    <div class="stat-label">Potential System-Wide Failure in Interdependent Networks</div>
+                    <div class="stat-sublabel">Buldyrev et al. (2010) Nature</div>
+                </div>
+                <div class="script-callout">
+                    <div class="label">Key Point</div>
+                    When one thing breaks down, it doesn't stop there. It pushes stress onto everything else.
+                </div>
+            </div>
+            <div class="card">
+                <h2>Cost Amplification</h2>
+                <div class="stat-box warn">
+                    <div class="stat-value">1.2–1.5×</div>
+                    <div class="stat-label">Cascade Cost Multiplier — Costs Multiply, Not Just Add</div>
+                    <div class="stat-sublabel">Ouyang (2014) Reliability Engineering</div>
+                </div>
+                <div class="script-callout">
+                    <div class="label">Key Point</div>
+                    One failure slows the response to another. Looking at each system alone dramatically underestimates the real hit.
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Infrastructure Interdependency — How It Flows</h2>
+            <div class="view-buttons">
+                <button class="view-button active" onclick="showView('overview','network-diagram',this)">Network Diagram</button>
+                <button class="view-button" onclick="showView('overview','cascade-pathways',this)">Cascade Pathways</button>
+                <button class="view-button" onclick="showView('overview','coupling-matrix',this)">Coupling Coefficients</button>
+                <button class="view-button" onclick="showView('overview','feedback-loops',this)">Feedback Loops</button>
+            </div>
+            <div id="network-diagram" class="view-content active">
+                <div id="networkPlot" class="plot-container"></div>
+            </div>
+            <div id="cascade-pathways" class="view-content">
+                <div style="padding:10px 0">
+                    <div class="cascade-list">
+                        <li><strong>Pathway 1 → Water:</strong> Hot pavement (60–65°C) → Subsurface heating (+8–12°C) → Pipe stress &amp; water quality risk &nbsp;|&nbsp; <em>Coupling: Thermal 0.35 | Structural 0.25 | Operational 0.40</em></li>
+                        <li><strong>Pathway 2 → Buildings:</strong> Degraded pavement (low albedo) → +3–5°C ambient → HVAC demand +10–40% &nbsp;|&nbsp; <em>Coupling: Thermal 0.45 | Operational 0.30 | Structural 0.25</em></li>
+                        <li><strong>Pathway 3 → Electrical:</strong> Pavement heat → Soil temp +15°C → Cable capacity –20–30% &nbsp;|&nbsp; <em>Coupling: Thermal 0.40 | Demand 0.35 | Operational 0.25</em></li>
+                        <li style="border-left-color:#6B3FA0"><strong>Pathway 4 → Public Health:</strong> Transport delays (+47 min EMS) + HVAC failure (indoor 40°C+) + Water quality degradation + Power outages → Heat illness &amp; mortality &nbsp;|&nbsp; <em>Coupling: Access 0.55 | Thermal 0.50 | Vulnerability 0.45</em></li>
+                    </div>
+                    <div class="warning-box"><strong>Critical Finding:</strong> Small initial failures can propagate to 50–70% system-wide failure in interdependent networks (Buldyrev et al., 2010, <em>Nature</em>). Public Health is the terminal cascade — it amplifies economic costs and feeds back into all recovery systems via workforce and hospital capacity constraints.</div>
+                </div>
+            </div>
+            <div id="coupling-matrix" class="view-content">
+                <div id="couplingPlot" class="plot-container"></div>
+                <div class="source-note">Thermal — Herb (2008), Li (2013), Anders (2005) | Structural — Rajani (2007), Puppala (2011) | Operational — Liu (2014), Bie (2017)</div>
+            </div>
+            <div id="feedback-loops" class="view-content">
+                <div class="grid-3">
+                    <div>
+                        <div class="cascade-list">
+                            <li style="border-left-color:var(--rust)"><strong>Loop 1 — Building → Electrical → Transport:</strong></li>
+                            <li>Hot pavement → buildings run AC harder</li>
+                            <li>Electricity demand surges (+20% peak)</li>
+                            <li>Grid overload → traffic signals fail</li>
+                            <li>More idling vehicles → more heat → loop repeats</li>
+                            <li><strong>Amplification: 1.3–1.8× per cycle</strong></li>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="cascade-list">
+                            <li style="border-left-color:var(--navy2)"><strong>Loop 2 — Water → Transport → Response:</strong></li>
+                            <li>Road degradation slows traffic (–50% speed)</li>
+                            <li>Water main repairs delayed (+47 min avg)</li>
+                            <li>Extended outage increases costs</li>
+                            <li>Budget pressure delays road repairs</li>
+                            <li><strong>Amplification: 1.2–1.4× per cycle</strong></li>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="cascade-list">
+                            <li style="border-left-color:#6B3FA0"><strong>Loop 3 — Public Health → Workforce → All Systems:</strong></li>
+                            <li>Heat illness reduces repair crew availability</li>
+                            <li>Hospital capacity strained → diverts EMS resources</li>
+                            <li>Slower infrastructure recovery → prolonged exposure</li>
+                            <li>Workforce shortage delays cascading repairs across all sectors</li>
+                            <li><strong>Amplification: 1.15–1.35× per cycle</strong></li>
+                        </div>
+                    </div>
+                </div>
+                <div class="success-box"><strong>Mitigation Strategy:</strong> Breaking any single link in the feedback loop prevents cascade amplification. Transportation infrastructure maintenance is the highest-leverage intervention point. Public health preparedness (cooling centers, EMS pre-positioning, hospital surge capacity) breaks Loop 3 and reduces the workforce cascade by 30–45%.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ TRANSPORTATION ══════════════════ -->
+    <div id="transportation" class="tab-content">
+        <div class="card">
+            <h2>1. Transportation — Where the Heat Problem Begins</h2>
+            <div class="script-callout">
+                <div class="label">Script Intro</div>
+                "We start here with roads and bridges. When roads start failing because of heat, that's not just a road problem — it causes problems for water, buildings, and power all at the same time."
+            </div>
+            <div class="view-buttons">
+                <button class="view-button active" onclick="showView('transportation','trans-surface',this)">1a · Surface Temperature</button>
+                <button class="view-button" onclick="showView('transportation','trans-degradation',this)">1b · Material Degradation</button>
+                <button class="view-button" onclick="showView('transportation','trans-speed',this)">1c · Speed Reduction & Traffic</button>
+            </div>
+
+            <!-- 1a Surface Temperature -->
+            <div id="trans-surface" class="view-content active">
+                <h3 style="color:var(--navy);margin-bottom:14px;">1a · How Hot Do Roads Actually Get?</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "This part shows how hot the road surface actually gets. Pavement can reach 60 to 65°C on a hot day — nearly twice the air temperature. And that heat doesn't just stay on the surface."
+                </div>
+                <div class="grid-3">
+                    <div class="stat-box">
+                        <div class="stat-value">60–65°C</div>
+                        <div class="stat-label">Pavement Surface Temperature</div>
+                        <div class="stat-sublabel">≈ 2× the air temperature</div>
+                    </div>
+                    <div class="stat-box warn">
+                        <div class="stat-value">1.15–1.25×</div>
+                        <div class="stat-label">Urban Heat Island Multiplier in Nashville</div>
+                        <div class="stat-sublabel">Downtown vs. suburban areas</div>
+                    </div>
+                    <div class="stat-box danger">
+                        <div class="stat-value">+5 days</div>
+                        <div class="stat-label">Per Decade Above 32°C — Nashville Climate Trend</div>
+                        <div class="stat-sublabel">Frequency is increasing</div>
+                    </div>
+                </div>
+                <div id="transTempPlot" class="plot-container"></div>
+                <div class="source-note">Source: Li et al. (2013) Building and Environment | NOAA Nashville climate data</div>
+            </div>
+
+            <!-- 1b Material Degradation -->
+            <div id="trans-degradation" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">1b · What That Heat Does to the Road Itself</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "Asphalt softens, cracks, and starts to buckle. We track how fast the damage gets worse depending on how hot it gets and how long the heat lasts."
+                </div>
+                <div id="transDegradePlot" class="plot-container"></div>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <strong>Asphalt Softening Point</strong>
+                        Standard asphalt binder softens at 46–52°C. Road surface at 60–65°C consistently exceeds this, causing rutting and surface deformation under traffic load.
+                    </div>
+                    <div class="detail-item">
+                        <strong>Structural Degradation Rate</strong>
+                        Each 5°C increase above softening point accelerates structural degradation by 15–20%. Nashville summers routinely push pavement past critical thresholds.
+                    </div>
+                </div>
+                <div class="source-note">Source: AASHTO pavement performance standards | Federal Highway Administration Heat Effects Guide</div>
+            </div>
+
+            <!-- 1c Speed Reduction -->
+            <div id="trans-speed" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">1c · Speed Reduction & Why It Matters Downstream</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "When roads degrade, traffic slows — up to 17 miles per hour slower in the worst spots. That slowdown matters a lot when we get to the next sections, because it delays everyone who needs to respond to problems."
+                </div>
+                <div class="grid-2">
+                    <div class="stat-box">
+                        <div class="stat-value">–17 mph</div>
+                        <div class="stat-label">Maximum Speed Reduction in Severely Degraded Zones</div>
+                        <div class="stat-sublabel">Modeled for Nashville road network</div>
+                    </div>
+                    <div class="stat-box danger">
+                        <div class="stat-value">–50%</div>
+                        <div class="stat-label">Speed in Worst-Case Cascade Conditions</div>
+                        <div class="stat-sublabel">Affects emergency access to all other systems</div>
+                    </div>
+                </div>
+                <div id="transSpeedPlot" class="plot-container"></div>
+                <div class="info-box"><strong>Why This Matters for Every Other Section:</strong> Every subsequent cascade — water repair delays, electrical crew access, HVAC part delivery — runs through this bottleneck. Transportation speed is the common denominator for all recovery times.</div>
+                <div class="source-note">Source: Nashville transportation model | Liu & Meng (2014) network analysis</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ WATER ══════════════════ -->
+    <div id="water" class="tab-content">
+        <div class="card">
+            <h2>2. Water Systems — The First Cascade</h2>
+            <div class="script-callout">
+                <div class="label">Script Intro</div>
+                "Now here's where it starts to get interesting. The road problems don't stay on the road."
+            </div>
+            <div class="view-buttons">
+                <button class="view-button active" onclick="showView('water','w-thermal',this)">2a · Underground Thermal Transfer</button>
+                <button class="view-button" onclick="showView('water','w-failure',this)">2b · Pipe Stress & Failure Risk</button>
+                <button class="view-button" onclick="showView('water','w-response',this)">2c · Emergency Response Delays</button>
+            </div>
+
+            <!-- 2a Thermal Transfer -->
+            <div id="w-thermal" class="view-content active">
+                <h3 style="color:var(--navy);margin-bottom:14px;">2a · Heat Traveling Underground to Water Pipes</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "Water pipes run right under roads — usually just about a meter deep. When the road above gets extremely hot, that heat travels down into the ground and warms the pipes — rising 8 to 12°C at pipe depth."
+                </div>
+                <div class="grid-2">
+                    <div class="stat-box">
+                        <div class="stat-value">8–12°C</div>
+                        <div class="stat-label">Subsurface Temperature Increase at Water Main Depth</div>
+                        <div class="stat-sublabel">Herb et al. (2008) — measured at 0.9–1.5m depth</div>
+                    </div>
+                    <div class="stat-box danger">
+                        <div class="stat-value">2× per 5°C</div>
+                        <div class="stat-label">Rate of Bacterial Growth Increase in Warmer Water</div>
+                        <div class="stat-sublabel">WHO quality threshold: 25°C</div>
+                    </div>
+                </div>
+                <div id="waterThermalPlot" class="plot-container"></div>
+
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <strong>Physical Setup</strong>
+                        Pavement surface 60–65°C. Soil conducts heat downward. Water mains at 0.9–1.5m experience 30–35°C soil temperature — vs. normal 15–20°C under vegetated areas.
+                    </div>
+                    <div class="detail-item">
+                        <strong>Water Quality Risk</strong>
+                        Warmer water grows bacteria faster. Above 25°C: quality degradation begins. Above 30°C: 4× baseline bacterial rate. Critical for public health in a prolonged heat event.
+                    </div>
+                </div>
+                <div class="source-note">Source: Herb et al. (2008) Journal of Hydrology | Agudelo-Vera et al. (2020) Water</div>
+            </div>
+
+            <!-- 2b Pipe Stress -->
+            <div id="w-failure" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">2b · Pipe Stress and Where Nashville is Most at Risk</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "Older cast-iron pipes — and Nashville has many of these — are especially vulnerable. The combination of heat and uneven ground from road buckling can increase pipe failure rates by 30 to 50 percent."
+                </div>
+                <div id="waterFailurePlot" class="plot-container"></div>
+                <div class="warning-box">
+                    <strong>Nashville Vulnerability:</strong> ~45% of Nashville bridges were built pre-1970. Water mains from the same era are cast iron — the most vulnerable to thermal stress, corrosion, and differential settlement. The areas with old roads and old pipes overlap significantly.
+                </div>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <strong>How Road Stress Reaches Pipes</strong>
+                        Pavement buckling creates uneven loading. Soil shifts transmit that movement to pipes. Surface load variability increases pipe stress by 15–40%. Differential settlement alone raises failure rate 30–50%.
+                    </div>
+                    <div class="detail-item">
+                        <strong>Failure Modes</strong>
+                        Joint separation from thermal cycling. Brittle fracture in aged cast iron. Corrosion pitting at elevated temperatures. Pressure surge damage during peak demand.
+                    </div>
+                </div>
+                <div class="source-note">Sources: Rajani & Tesfamariam (2007) | Wols & van Thienen (2014) | Kleiner & Rajani (2001)</div>
+            </div>
+
+            <!-- 2c Emergency Response -->
+            <div id="w-response" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">2c · Response Delays — The Road Problem Loops Back</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "When a water main breaks, repair crews have to drive there. But if roads in that area are already degraded, response times go up — and longer breaks mean more water lost, and more cost."
+                </div>
+                <div class="grid-2">
+                    <div class="stat-box">
+                        <div class="stat-value">+47 min</div>
+                        <div class="stat-label">Average Emergency Response Delay — Chicago 1995 Heat Wave</div>
+                        <div class="stat-sublabel">Klinenberg (2015) | Semenza et al. (1996)</div>
+                    </div>
+                    <div class="stat-box warn">
+                        <div class="stat-value">$2–5K</div>
+                        <div class="stat-label">Water Loss Cost Per Hour of Delayed Repair</div>
+                        <div class="stat-sublabel">Tabesh et al. (2009)</div>
+                    </div>
+                </div>
+                <div id="waterResponsePlot" class="plot-container"></div>
+                <div class="info-box">
+                    <strong>The Feedback:</strong> Every 10% increase in travel time → 8–15% longer repair time → more water lost → higher costs → less budget for road repair → roads worsen further.
+                </div>
+                <div class="source-note">Sources: Liu & Meng (2014) | Marchionni et al. (2016) | Tabesh et al. (2009)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ BUILDINGS ══════════════════ -->
+    <div id="buildings" class="tab-content">
+        <div class="card">
+            <h2>3. Buildings — Hit From Two Sides at Once</h2>
+            <div class="script-callout">
+                <div class="label">Script Intro</div>
+                "Buildings are next in the chain, and they get hit from two sides at once."
+            </div>
+            <div class="view-buttons">
+                <button class="view-button active" onclick="showView('buildings','b-heat',this)">3a · Heat Island Amplification</button>
+                <button class="view-button" onclick="showView('buildings','b-hvac',this)">3b · HVAC Overload & Failure</button>
+                <button class="view-button" onclick="showView('buildings','b-structural',this)">3c · Structural Stress</button>
+            </div>
+
+            <!-- 3a Heat Island -->
+            <div id="b-heat" class="view-content active">
+                <h3 style="color:var(--navy);margin-bottom:14px;">3a · Roads Making the Local Climate Hotter</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "Damaged, dark pavement absorbs more heat and radiates it outward. Buildings within about 100 meters sit in a heat island that gets 15 to 25 percent more intense because of road degradation specifically."
+                </div>
+                <div class="grid-2">
+                    <div class="stat-box">
+                        <div class="stat-value">15–25%</div>
+                        <div class="stat-label">Heat Island Intensity Increase from Road Degradation</div>
+                        <div class="stat-sublabel">vs. well-maintained pavement with higher albedo</div>
+                    </div>
+                    <div class="stat-box warn">
+                        <div class="stat-value">100m</div>
+                        <div class="stat-label">Impact Radius — Buildings Within This Zone Most Affected</div>
+                        <div class="stat-sublabel">+1.5–3.0°C additional ambient temperature</div>
+                    </div>
+                </div>
+                <div id="buildingHeatPlot" class="plot-container"></div>
+                <div class="source-note">Source: Li et al. (2013) Building and Environment | Morakinyo et al. (2017) Energy and Buildings</div>
+            </div>
+
+            <!-- 3b HVAC -->
+            <div id="b-hvac" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">3b · Cooling Systems Working Too Hard, Too Long</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "To fight that extra heat, cooling systems run harder and longer than normal. Running 20 percent above capacity doubles the failure rate. For Nashville's older building stock, this means real equipment loss — at $3,000 to $8,000 per unit."
+                </div>
+                <div class="grid-3">
+                    <div class="stat-box">
+                        <div class="stat-value">2×</div>
+                        <div class="stat-label">HVAC Failure Rate When Running 20% Over Capacity</div>
+                        <div class="stat-sublabel">Shen et al. (2017)</div>
+                    </div>
+                    <div class="stat-box warn">
+                        <div class="stat-value">$3–8K</div>
+                        <div class="stat-label">Premature HVAC Replacement Cost Per Unit</div>
+                        <div class="stat-sublabel">Residential — Shah et al. (2015) LBNL</div>
+                    </div>
+                    <div class="stat-box danger">
+                        <div class="stat-value">$400M</div>
+                        <div class="stat-label">Estimated Nashville System-Wide HVAC Cost (10-year)</div>
+                        <div class="stat-sublabel">If 10–20% of ~400,000 buildings affected</div>
+                    </div>
+                </div>
+                <div id="hvacDegradePlot" class="plot-container"></div>
+                <div class="source-note">Sources: Shen (2017) Energy and Buildings | Shah et al. (2015) Lawrence Berkeley National Laboratory</div>
+            </div>
+
+            <!-- 3c Structural -->
+            <div id="b-structural" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">3c · Road Settlement Reaching Building Foundations</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "When road material shifts or settles unevenly, that movement can reach the foundations of nearby buildings — especially older ones. This panel flags areas where pavement settlement and building age overlap, creating pockets of elevated structural concern."
+                </div>
+                <div class="grid-2">
+                    <div class="stat-box">
+                        <div class="stat-value">&gt;25mm</div>
+                        <div class="stat-label">Differential Settlement Threshold for Structural Damage</div>
+                        <div class="stat-sublabel">Puppala et al. (2011) ASCE</div>
+                    </div>
+                    <div class="stat-box danger">
+                        <div class="stat-value">45%</div>
+                        <div class="stat-label">Nashville Bridges Built Pre-1970 — Same Era as Vulnerable Buildings</div>
+                    </div>
+                </div>
+                <div id="buildingStructuralPlot" class="plot-container"></div>
+                <div class="warning-box">
+                    <strong>Compound Risk Zones:</strong> Areas with old pavement + old buildings experience both heat island amplification AND foundation stress simultaneously. These zones represent the highest combined vulnerability in the Nashville network.
+                </div>
+                <div class="source-note">Sources: Puppala et al. (2011) | Zhang et al. (2011) Applied Mechanics and Materials</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ ELECTRICAL ══════════════════ -->
+    <div id="electrical" class="tab-content">
+        <div class="card">
+            <h2>4. Electrical Grid — Stressed From Multiple Directions</h2>
+            <div class="script-callout">
+                <div class="label">Script Intro</div>
+                "Electricity is the system that ties everything else together — and it's stressed from multiple directions."
+            </div>
+            <div class="view-buttons">
+                <button class="view-button active" onclick="showView('electrical','e-cable',this)">4a · Underground Cable Heating</button>
+                <button class="view-button" onclick="showView('electrical','e-demand',this)">4b · Demand Surge</button>
+                <button class="view-button" onclick="showView('electrical','e-access',this)">4c · Repair Access Delays</button>
+            </div>
+
+            <!-- 4a Cable Heating -->
+            <div id="e-cable" class="view-content active">
+                <h3 style="color:var(--navy);margin-bottom:14px;">4a · How Pavement Heat Cuts Cable Capacity</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "Power cables run underground near roads. Heat from the pavement raises the temperature around those cables — and for every 5-degree increase in soil temperature, cable capacity drops 4 to 7 percent."
+                </div>
+                <div class="grid-2">
+                    <div class="stat-box">
+                        <div class="stat-value">4–7%</div>
+                        <div class="stat-label">Cable Capacity Loss Per 5°C Soil Temperature Increase</div>
+                        <div class="stat-sublabel">Anders (2005) IEEE Press — IEC 60287 standard</div>
+                    </div>
+                    <div class="stat-box danger">
+                        <div class="stat-value">38–40°C</div>
+                        <div class="stat-label">Soil Temperature at 0.8m Depth Under Hot Pavement</div>
+                        <div class="stat-sublabel">Normal baseline: 15–20°C</div>
+                    </div>
+                </div>
+                <div id="electricalThermalPlot" class="plot-container"></div>
+                <div class="source-note">Sources: Anders (2005) | Ocłoń et al. (2015) International Journal of Thermal Sciences</div>
+            </div>
+
+            <!-- 4b Demand Surge -->
+            <div id="e-demand" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">4b · More Demand + Less Capacity = High Failure Risk</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "At the same time, because buildings are hotter and cooling systems run overtime, electricity demand spikes. More demand plus reduced cable capacity is a dangerous combination — and this panel maps where those two pressures overlap."
+                </div>
+                <div id="electricalDemandPlot" class="plot-container"></div>
+                <div class="warning-box">
+                    <strong>Double Jeopardy Example:</strong> Under 8°C transport heat island — cable capacity drops to ~83% of rated while demand rises to ~128% of baseline. Net system stress = 1.54× baseline → brownouts and blackouts become likely.
+                </div>
+                <div class="source-note">Sources: Sailor & Pavlova (2003) | Miller et al. (2008) Journal of Applied Meteorology</div>
+            </div>
+
+            <!-- 4c Repair Access -->
+            <div id="e-access" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">4c · Getting Crews There When Roads Are Bad</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "Downed lines or failing equipment need crews to get to them. Road closures and slow traffic from heat degradation delay that response — and every extra hour of outage multiplies the cost."
+                </div>
+                <div class="grid-2">
+                    <div class="stat-box">
+                        <div class="stat-value">+40–60%</div>
+                        <div class="stat-label">Repair Time Increase When Roads Are Degraded</div>
+                        <div class="stat-sublabel">2–4 hrs normal → 3.2–6.4 hrs under degraded conditions</div>
+                    </div>
+                    <div class="stat-box danger">
+                        <div class="stat-value">$50–200K</div>
+                        <div class="stat-label">Per Hour Cost of Extended Industrial Outage</div>
+                        <div class="stat-sublabel">Bie et al. (2017) IEEE Proceedings</div>
+                    </div>
+                </div>
+                <div id="elecAccessPlot" class="plot-container"></div>
+                <div class="info-box"><strong>Signal Cascade:</strong> Nashville has ~1,000 signalized intersections. Each runs 3–5 kW. At higher ambient temps, signal failure rates rise 15–25% per 5°C — causing traffic jams that further slow repair crews.</div>
+                <div class="source-note">Sources: Bie et al. (2017) | Ouyang & Wang (2015) | Elejoste et al. (2013)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ ECONOMICS ══════════════════ -->
+    <div id="economics" class="tab-content">
+        <div class="card">
+            <h2>5. Economics — Adding It All Up</h2>
+            <div class="script-callout">
+                <div class="label">Script Intro</div>
+                "This final section puts a number on all of it."
+            </div>
+            <div class="view-buttons">
+                <button class="view-button active" onclick="showView('economics','econ-breakdown',this)">5a · System-by-System Costs</button>
+                <button class="view-button" onclick="showView('economics','econ-multiplier',this)">5b · Compound Multiplier</button>
+                <button class="view-button" onclick="showView('economics','econ-scenario',this)">5c · Scenario Comparison</button>
+                <button class="view-button" onclick="showView('economics','econ-timeline',this)">Timeline</button>
+                <button class="view-button" onclick="showView('economics','econ-cases',this)">Case Studies</button>
+            </div>
+
+            <!-- 5a Breakdown -->
+            <div id="econ-breakdown" class="view-content active">
+                <h3 style="color:var(--navy);margin-bottom:14px;">5a · Where the Money Goes, System by System</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "We break out the direct repair and operational costs for each system — transportation, water, buildings, electricity — so you can see where the money goes."
+                </div>
+                <div id="economicBreakdownPlot" class="plot-container"></div>
+                <div class="grid-2">
+                    <div class="stat-box">
+                        <div class="stat-value">$2–5M</div>
+                        <div class="stat-label">Estimated Daily System-Wide Cost During Major Nashville Heat Wave</div>
+                    </div>
+                    <div class="stat-box warn">
+                        <div class="stat-value">700K+</div>
+                        <div class="stat-label">Nashville Metro Residents Affected Across All Systems</div>
+                    </div>
+                </div>
+                <div class="source-note">Based on: Tabesh et al. (2009) | Shah et al. (2015) | Bie et al. (2017)</div>
+            </div>
+
+            <!-- 5b Multiplier -->
+            <div id="econ-multiplier" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">5b · Why Costs Multiply, Not Just Add</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say — Most Important Slide</div>
+                    "These costs don't just stack — they multiply. When systems fail together, the total is 20 to 50 percent higher than if you added up each system separately. That's because one failure slows down the response to another."
+                </div>
+                <div id="economicMultiplierPlot" class="plot-container"></div>
+                <div class="warning-box">
+                    <strong>Key Insight:</strong> Ignoring cascade effects underestimates true infrastructure costs by 50–100%. Traditional single-system analysis misses the majority of economic impact.
+                </div>
+                <div class="cascade-list">
+                    <li><strong>Direct transport damage (event example):</strong> $50,000</li>
+                    <li><strong>Water system impacts:</strong> +$15,000 (+30%)</li>
+                    <li><strong>Building HVAC failures:</strong> +$20,000 (+40%)</li>
+                    <li><strong>Electrical grid stress:</strong> +$10,000 (+20%)</li>
+                    <li><strong>Public health (EMS surge, hospitalization, workforce loss):</strong> +$18,000 (+36%)</li>
+                    <li><strong>Cascade amplification (feedback effects):</strong> +$15,000</li>
+                    <li><strong>Total compound cost: $128,000 vs. $50,000 single-system estimate — 2.56× real cost</strong></li>
+                </div>
+                <div class="source-note">Source: Buldyrev et al. (2010) Nature | Ouyang (2014) Reliability Engineering</div>
+            </div>
+
+            <!-- 5c Scenario Comparison -->
+            <div id="econ-scenario" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">5c · How the Gap Widens Under Extreme Heat</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "This panel compares a moderate heat event versus an extreme one. The cost curves diverge fast — which is the core argument for early investment in resilience."
+                </div>
+                <div id="scenarioPlot" class="plot-container"></div>
+                <div class="success-box">
+                    <strong>The Case for Early Investment:</strong> The gap between moderate and extreme event costs grows non-linearly. Small reductions in peak heat (via cool pavement, shade, etc.) produce outsized economic benefits across all downstream systems.
+                </div>
+                <div class="source-note">Sources: Schramm et al. (2020) MMWR | Ouyang (2014) | Nashville vulnerability multipliers</div>
+            </div>
+
+            <!-- Timeline -->
+            <div id="econ-timeline" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">Cascade Impact Timeline</h3>
+                <div id="timelinePlot" class="plot-container"></div>
+                <div class="cascade-list">
+                    <li><strong>Transportation:</strong> Hours to days — immediate impact, fastest recovery</li>
+                    <li><strong>Water systems:</strong> Days to weeks — delayed impact, moderate recovery</li>
+                    <li><strong>Building HVAC:</strong> Weeks to months — gradual degradation, slow recovery</li>
+                    <li><strong>Electrical grid:</strong> Hours (immediate) + months (equipment degradation)</li>
+                    <li style="border-left-color:#6B3FA0"><strong>Public Health:</strong> Day 1 peak (acute illness) → sustained weeks (workforce loss, chronic exposure)</li>
+                </div>
+                <div class="success-box"><strong>Optimal Recovery:</strong> Prioritize transportation restoration first — reduces recovery time for all other systems by 30–40% (Zhu et al., 2017).</div>
+                <div class="source-note">Sources: Zhu et al. (2017) Structure and Infrastructure Engineering | Faturechi & Miller-Hooks (2015)</div>
+            </div>
+
+            <!-- Case Studies -->
+            <div id="econ-cases" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">Historical Case Studies</h3>
+                <div class="grid-2">
+                    <div>
+                        <h4 style="color:var(--navy2);margin-bottom:10px;">Chicago 1995 — 5 Days, 35–41°C</h4>
+                        <div class="cascade-list">
+                            <li><strong>Road damage:</strong> Pavement buckling at 40+ locations</li>
+                            <li><strong>Water:</strong> +30% main break rate</li>
+                            <li><strong>Power:</strong> 49,000 customers lost electricity</li>
+                            <li><strong>Response delay:</strong> Average +47 minutes</li>
+                            <li><strong>Deaths:</strong> 739 — interdependencies increased mortality 25–35%</li>
+                        </div>
+                        <div class="source-note">Semenza et al. (1996) NEJM | Klinenberg (2015)</div>
+                    </div>
+                    <div>
+                        <h4 style="color:var(--navy2);margin-bottom:10px;">Europe 2003 — Extended Duration</h4>
+                        <div class="cascade-list">
+                            <li><strong>Roads damaged:</strong> 15,000 km in France alone</li>
+                            <li><strong>Rail:</strong> 50% speed reduction from track buckling</li>
+                            <li><strong>UK grid:</strong> Within 0.1% of full blackout</li>
+                            <li><strong>Deaths:</strong> 52,000+ across Europe</li>
+                            <li><strong>Economic cost:</strong> €13 billion ($15B USD)</li>
+                        </div>
+                        <div class="source-note">Larsen (2006) Earth Policy Institute | Koppe et al. (2004) WHO</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ PUBLIC HEALTH ══════════════════ -->
+    <div id="publichealth" class="tab-content">
+        <div class="card">
+            <h2>6. Public Health — The Human Cost of the Cascade</h2>
+            <div class="script-callout">
+                <div class="label">Script Intro</div>
+                "Every system failure we've discussed ultimately affects people. Public health is where the cascade becomes life and death — and where it feeds back into every other system through workforce and hospital capacity."
+            </div>
+            <div class="view-buttons">
+                <button class="view-button active" onclick="showView('publichealth','ph-mortality',this)">6a · Heat Illness &amp; Mortality</button>
+                <button class="view-button" onclick="showView('publichealth','ph-ems',this)">6b · EMS Response Delays</button>
+                <button class="view-button" onclick="showView('publichealth','ph-vulnerable',this)">6c · Vulnerable Populations</button>
+            </div>
+
+            <!-- 6a Heat Illness & Mortality -->
+            <div id="ph-mortality" class="view-content active">
+                <h3 style="color:var(--navy);margin-bottom:14px;">6a · How Infrastructure Failures Drive Heat-Related Deaths</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "Heat-related mortality doesn't come from temperature alone. HVAC failures, power outages, and delayed EMS all compound baseline heat risk. Chicago 1995 showed 25–35% of deaths were attributable to cascade failures — not just the heat itself."
+                </div>
+                <div class="grid-3">
+                    <div class="stat-box purple">
+                        <div class="stat-value">739</div>
+                        <div class="stat-label">Excess Deaths — Chicago 1995 Heat Wave</div>
+                        <div class="stat-sublabel">25–35% attributable to cascade failures (Semenza et al., 1996 NEJM)</div>
+                    </div>
+                    <div class="stat-box danger">
+                        <div class="stat-value">52,000+</div>
+                        <div class="stat-label">Excess Deaths — Europe 2003</div>
+                        <div class="stat-sublabel">Infrastructure failures amplified mortality 1.3–1.5× (Robine et al., 2008)</div>
+                    </div>
+                    <div class="stat-box warn">
+                        <div class="stat-value">3×</div>
+                        <div class="stat-label">Mortality Risk Multiplier When HVAC Fails During Extreme Heat</div>
+                        <div class="stat-sublabel">Vandentorren et al. (2006) Eur J Public Health</div>
+                    </div>
+                </div>
+                <div id="phMortalityPlot" class="plot-container"></div>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <strong>HVAC Failure → Lethal Indoor Temps</strong>
+                        When power fails or HVAC breaks down, indoor temperatures can reach 40–45°C within 2–4 hours in Nashville's older building stock. Above 40°C core body temperature: heat stroke onset in 30–60 minutes without intervention.
+                    </div>
+                    <div class="detail-item">
+                        <strong>Water Quality → Illness Compounding</strong>
+                        Drinking water above 25°C accelerates bacterial growth 2× per 5°C. During heat events, dehydration + compromised water quality creates compound risk — especially for elderly and immunocompromised populations.
+                    </div>
+                </div>
+                <div class="source-note">Sources: Semenza et al. (1996) NEJM | Robine et al. (2008) Comptes Rendus Biologies | Vandentorren et al. (2006)</div>
+            </div>
+
+            <!-- 6b EMS Response -->
+            <div id="ph-ems" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">6b · How Road Degradation Delays Emergency Response</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "Every extra minute of EMS delay during a cardiac or heat stroke event increases mortality risk measurably. When roads are degraded during a heat event, we're stacking the transportation cascade directly onto the health cascade."
+                </div>
+                <div class="grid-2">
+                    <div class="stat-box purple">
+                        <div class="stat-value">+47 min</div>
+                        <div class="stat-label">Average Emergency Response Delay — Chicago 1995</div>
+                        <div class="stat-sublabel">Roads degraded + heat + congestion compound</div>
+                    </div>
+                    <div class="stat-box danger">
+                        <div class="stat-value">10%</div>
+                        <div class="stat-label">Cardiac Survival Drop Per Minute Without Defibrillation</div>
+                        <div class="stat-sublabel">AHA Guidelines — each minute delay = 10% mortality increase</div>
+                    </div>
+                </div>
+                <div id="phEmsPlot" class="plot-container"></div>
+                <div class="warning-box">
+                    <strong>Feedback Loop:</strong> Increased ER admissions during heat events strain hospital capacity → longer wait times → diverted ambulances → further delayed response → more severe outcomes → more admissions. Cascade amplification: 1.15–1.35× per cycle.
+                </div>
+                <div class="source-note">Sources: AHA ACLS Guidelines | Klinenberg (2015) Heat Wave | Semenza et al. (1996)</div>
+            </div>
+
+            <!-- 6c Vulnerable Populations -->
+            <div id="ph-vulnerable" class="view-content">
+                <h3 style="color:var(--navy);margin-bottom:14px;">6c · Vulnerable Populations &amp; Nashville's Exposure Map</h3>
+                <div class="script-callout">
+                    <div class="label">What to Say</div>
+                    "Not everyone faces equal risk. The elderly, outdoor workers, and residents of low-income neighborhoods with old housing and poor AC coverage bear the greatest burden — and these populations often overlap with the highest infrastructure degradation zones in Nashville."
+                </div>
+                <div id="phVulnerablePlot" class="plot-container"></div>
+                <div class="grid-2">
+                    <div class="detail-item">
+                        <strong>Elderly (65+) — 3× Mortality Risk</strong>
+                        Reduced thermoregulation capacity, higher rates of cardiovascular comorbidities, more likely to live alone. Nashville has ~130,000 residents 65+ — concentrated in areas with older housing stock and lower AC penetration.
+                    </div>
+                    <div class="detail-item">
+                        <strong>Low-Income &amp; Outdoor Workers</strong>
+                        Less access to AC, higher outdoor exposure. Construction, landscaping, and logistics workers are most exposed. These groups also have lower access to healthcare, amplifying downstream mortality risk.
+                    </div>
+                </div>
+                <div id="phWorkerPlot" class="plot-container"></div>
+                <div class="success-box">
+                    <strong>Intervention Leverage Points:</strong> Pre-positioned cooling centers along degraded road corridors; EMS staging in high-vulnerability zones during heat advisories; hospital pre-surge protocols activated when pavement temps exceed 60°C. These measures can reduce cascade mortality by 30–40% at low marginal cost.
+                </div>
+                <div class="source-note">Sources: Schramm et al. (2020) MMWR | NIOSH Heat Stress Guidelines | Harlan et al. (2006) Social Science &amp; Medicine</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ── Tab & View Management ──────────────────────────
+function showMainTab(tabName, btn) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+    btn.classList.add('active');
+}
+function showView(section, viewName, btn) {
+    document.querySelectorAll('#' + section + ' .view-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('#' + section + ' .view-button').forEach(el => el.classList.remove('active'));
+    document.getElementById(viewName).classList.add('active');
+    btn.classList.add('active');
+}
+
+const cfg = {responsive: true};
+const bg = {plot_bgcolor:'#F7F3EE', paper_bgcolor:'#FDFCFB', font:{color:'#1A1A1A', family:'Source Serif 4, Georgia, serif'}};
+
+// ── OVERVIEW: Network (Sankey) ─────────────────────
+Plotly.newPlot('networkPlot', [{
+    type:'sankey', orientation:'h',
+    node:{pad:15,thickness:30,line:{color:'black',width:0.5},
+        label:['Transportation Heat','Water Systems','Buildings','Electrical Grid',
+               'Water Quality Risk','Pipe Failures','HVAC Demand','Energy Consumption','Cable Stress','Demand Surge',
+               'Public Health','Heat Illness / Mortality','EMS & Hospital Delays'],
+        color:['#FF6B6B','#4ECDC4','#45B7D1','#FFA07A','#5DADE2','#48C9B0','#F39C12','#E67E22','#E74C3C','#C0392B',
+               '#9B59B6','#8E44AD','#6C3483']},
+    link:{source:[0,0,0,1,1,2,2,3,3, 0,1,2,3,10,10],
+          target:[1,2,3,4,5,6,7,8,9, 10,10,10,10,11,12],
+        value:[35,45,40,20,30,40,35,40,35, 25,20,30,25,35,30],
+        color:['rgba(78,205,196,0.3)','rgba(69,183,209,0.3)','rgba(255,160,122,0.3)',
+               'rgba(93,173,226,0.3)','rgba(72,201,176,0.3)','rgba(243,156,18,0.3)',
+               'rgba(230,126,34,0.3)','rgba(231,76,60,0.3)','rgba(192,57,43,0.3)',
+               'rgba(155,89,182,0.35)','rgba(155,89,182,0.25)','rgba(155,89,182,0.3)','rgba(155,89,182,0.25)',
+               'rgba(142,68,173,0.4)','rgba(108,52,131,0.4)']}
+}],{title:'Infrastructure Cascade Flow — Transportation as Source System',font:{size:12},...bg,height:500},cfg);
+
+// ── OVERVIEW: Coupling Coefficients ──────────────────
+Plotly.newPlot('couplingPlot',[
+    {x:['Thermal','Structural','Operational'],y:[0.35,0.25,0.40],name:'Transport → Water',type:'bar',marker:{color:'#4ECDC4'}},
+    {x:['Thermal','Structural','Operational'],y:[0.45,0.25,0.30],name:'Transport → Buildings',type:'bar',marker:{color:'#45B7D1'}},
+    {x:['Thermal','Demand','Operational'],y:[0.40,0.35,0.25],name:'Transport → Electrical',type:'bar',marker:{color:'#FFA07A'}},
+    {x:['Thermal','Access','Vulnerability'],y:[0.50,0.55,0.45],name:'All Systems → Public Health',type:'bar',marker:{color:'#9B59B6'}}
+],{title:'Cascade Coupling Strength by Mechanism',barmode:'group',
+    yaxis:{title:'Coupling Coefficient (0–1)',range:[0,0.65]},
+    xaxis:{title:'Cascade Mechanism'},...bg,height:450},cfg);
+
+// ── TRANSPORTATION: Surface Temp ──────────────────────
+Plotly.newPlot('transTempPlot',[
+    {x:[25,27,30,33,35,38,40],y:[42,48,55,60,65,72,78],name:'Pavement Surface (°C)',
+     type:'scatter',mode:'lines+markers',line:{color:'#E74C3C',width:3},marker:{size:10}},
+    {x:[25,27,30,33,35,38,40],y:[25,27,30,33,35,38,40],name:'Air Temperature (°C)',
+     type:'scatter',mode:'lines+markers',line:{color:'#3498DB',width:2,dash:'dash'},marker:{size:8}}
+],{title:'Pavement vs. Air Temperature — The Amplification Effect',
+    xaxis:{title:'Air Temperature (°C)'},
+    yaxis:{title:'Temperature (°C)',range:[20,82]},
+    annotations:[{x:35,y:65,text:'~2× air temp',showarrow:true,arrowhead:2,ax:40,ay:-30,font:{color:'#E74C3C',size:13}}],
+    ...bg,height:430},cfg);
+
+// ── TRANSPORTATION: Material Degradation ──────────────
+Plotly.newPlot('transDegradePlot',[
+    {x:['Normal\n(25°C air)','Warm\n(30°C air)','Hot\n(35°C air)','Extreme\n(40°C air)'],
+     y:[0,15,40,75],name:'Structural Degradation Rate (%)',type:'bar',
+     marker:{color:['#2ECC71','#F39C12','#E67E22','#E74C3C']},
+     text:['Baseline','+15%','+40%','+75%'],textposition:'outside'}
+],{title:'Pavement Structural Degradation Rate by Temperature',
+    yaxis:{title:'Degradation Rate (% above baseline)',range:[0,90]},
+    xaxis:{title:'Ambient Air Temperature'},
+    ...bg,height:430},cfg);
+
+// ── TRANSPORTATION: Speed Reduction ──────────────────
+Plotly.newPlot('transSpeedPlot',[
+    {x:['Good Roads','Fair Degradation','Moderate Degradation','Severe Degradation','Extreme + Heat'],
+     y:[35,30,25,20,18],name:'Avg Travel Speed (mph)',type:'scatter',
+     mode:'lines+markers+text',line:{color:'#1C3557',width:3},marker:{size:12},
+     text:['35 mph','30 mph','25 mph','20 mph','18 mph'],textposition:'top center'},
+    {x:['Good Roads','Fair Degradation','Moderate Degradation','Severe Degradation','Extreme + Heat'],
+     y:[0,5,10,15,17],name:'Speed Reduction (mph)',type:'bar',
+     marker:{color:'rgba(231,76,60,0.3)',line:{color:'#E74C3C',width:2}}}
+],{title:'Travel Speed vs. Road Degradation Level — Nashville Network',
+    yaxis:{title:'Speed (mph)'},barmode:'overlay',
+    annotations:[{x:'Extreme + Heat',y:17,text:'–17 mph max',showarrow:true,arrowhead:2,ax:0,ay:-30,font:{color:'#E74C3C',size:13}}],
+    ...bg,height:430},cfg);
+
+// ── WATER: Thermal Transfer ───────────────────────────
+Plotly.newPlot('waterThermalPlot',[
+    {x:[0,0.3,0.6,0.9,1.2,1.5],y:[62,53,45,38,34,32],name:'Under Hot Pavement (60–65°C surface)',
+     type:'scatter',mode:'lines+markers',line:{color:'#FF6B6B',width:3},marker:{size:10}},
+    {x:[0,0.3,0.6,0.9,1.2,1.5],y:[27,25,23,22,21,21],name:'Under Vegetated Area (baseline)',
+     type:'scatter',mode:'lines+markers',line:{color:'#2ECC71',width:3,dash:'dash'},marker:{size:10}}
+],{title:'Subsurface Temperature vs. Depth — Pavement vs. Green Surface',
+    xaxis:{title:'Depth (meters)',range:[0,1.6]},
+    yaxis:{title:'Temperature (°C)',range:[18,68]},
+    shapes:[{type:'rect',xref:'x',yref:'paper',x0:0.9,y0:0,x1:1.5,y1:1,fillcolor:'#4ECDC4',opacity:0.15,line:{width:0}}],
+    annotations:[{x:1.2,y:42,text:'Water Main Zone<br>+8–12°C increase',showarrow:false,font:{size:11,color:'#1a7a7a'}}],
+    ...bg,height:430},cfg);
+
+// ── WATER: Failure Rates ──────────────────────────────
+Plotly.newPlot('waterFailurePlot',[
+    {x:['Good Roads\n(baseline)','Fair Roads','Poor Roads','Poor Roads\n+ Heat Event'],
+     y:[1.0,1.3,1.8,2.4],type:'bar',
+     marker:{color:['#2ECC71','#F39C12','#E67E22','#E74C3C'],line:{color:'#333',width:2}},
+     text:['Baseline','+30%','+80%','+140%'],textposition:'outside'}
+],{title:'Water Main Failure Rate Multiplier by Road Condition',
+    yaxis:{title:'Relative Failure Rate (1.0 = normal)',range:[0,3.0]},
+    annotations:[{x:'Poor Roads\n+ Heat Event',y:2.4,text:'Nashville cast-iron\npipes most at risk',
+        showarrow:true,arrowhead:2,ax:60,ay:-40,font:{size:11,color:'#E74C3C'}}],
+    ...bg,height:430},cfg);
+
+// ── WATER: Response Time ──────────────────────────────
+Plotly.newPlot('waterResponsePlot',[
+    {x:[0,10,20,30,40,50],y:[60,67,75,82,91,99],name:'Repair Time (minutes)',
+     type:'scatter',mode:'lines+markers',line:{color:'#E74C3C',width:3},marker:{size:10}},
+    {x:[0,10,20,30,40,50],y:[0,2000,4500,7000,10000,13000],name:'Water Loss Cost ($)',
+     type:'scatter',mode:'lines+markers',line:{color:'#F39C12',width:3,dash:'dash'},marker:{size:10},yaxis:'y2'}
+],{title:'Repair Time & Water Loss Cost vs. Road Travel Time Increase',
+    xaxis:{title:'Road Travel Time Increase (%)'},
+    yaxis:{title:'Repair Time (minutes)',range:[50,110]},
+    yaxis2:{title:'Estimated Water Loss Cost ($)',overlaying:'y',side:'right',range:[0,15000]},
+    shapes:[{type:'line',xref:'x',yref:'paper',x0:40,y0:0,x1:40,y1:1,line:{color:'#E74C3C',width:2,dash:'dot'}}],
+    annotations:[{x:40,y:91,text:'+47 min avg\n(Chicago 1995)',showarrow:true,arrowhead:2,ax:50,ay:-30,font:{color:'#E74C3C',size:11}}],
+    ...bg,height:430},cfg);
+
+// ── BUILDINGS: Heat Island ────────────────────────────
+Plotly.newPlot('buildingHeatPlot',[
+    {x:[0,25,50,75,100,150,200],y:[3.2,2.6,2.0,1.5,1.0,0.5,0.2],
+     type:'scatter',mode:'lines+markers',fill:'tozeroy',fillcolor:'rgba(231,76,60,0.15)',
+     line:{color:'#E74C3C',width:3},marker:{size:12},name:'Additional Ambient Temp (°C)'}
+],{title:'Building Heat Gain vs. Distance from Degraded Road',
+    xaxis:{title:'Distance from Road (meters)',range:[0,210]},
+    yaxis:{title:'Additional Temperature (°C)',range:[0,3.8]},
+    shapes:[{type:'rect',xref:'x',yref:'paper',x0:0,y0:0,x1:100,y1:1,fillcolor:'#E74C3C',opacity:0.08,line:{width:0}}],
+    annotations:[
+        {x:50,y:2.8,text:'15–25% higher\nheat island intensity',showarrow:false,font:{size:11,color:'#E74C3C'}},
+        {x:100,y:1.2,text:'100m threshold',showarrow:true,arrowhead:2,ax:40,ay:20,font:{size:10}}
+    ],
+    ...bg,height:430},cfg);
+
+// ── BUILDINGS: HVAC Degradation ───────────────────────
+Plotly.newPlot('hvacDegradePlot',[
+    {x:['Normal\n(25°C ambient)','Transport +3°C\n(28°C)','Transport +5°C\n(30°C)','Transport +8°C\n(33°C)'],
+     y:[100,108,117,130],name:'Energy Demand (%)',type:'bar',marker:{color:['#2ECC71','#F39C12','#E67E22','#E74C3C']}},
+    {x:['Normal\n(25°C ambient)','Transport +3°C\n(28°C)','Transport +5°C\n(30°C)','Transport +8°C\n(33°C)'],
+     y:[100,115,140,200],name:'Failure Rate (%)',type:'scatter',mode:'lines+markers',
+     line:{color:'#C0392B',width:3},marker:{size:12},yaxis:'y2'}
+],{title:'HVAC Energy Demand & Failure Rate vs. Road Heat Island Effect',
+    barmode:'group',
+    yaxis:{title:'Energy Demand (% of baseline)',range:[90,135]},
+    yaxis2:{title:'Relative Failure Rate (%)',overlaying:'y',side:'right',range:[90,215]},
+    annotations:[{x:'Transport +8°C\n(33°C)',y:200,text:'2× failure rate\n@20% overcapacity',yref:'y2',
+        showarrow:true,arrowhead:2,ax:-60,ay:-30,font:{color:'#C0392B',size:11}}],
+    ...bg,height:430},cfg);
+
+// ── BUILDINGS: Structural Stress ─────────────────────
+Plotly.newPlot('buildingStructuralPlot',[
+    {x:['0–10mm','10–25mm','25–50mm','>50mm'],
+     y:[5,20,55,85],name:'Structural Damage Risk (%)',type:'bar',
+     marker:{color:['#2ECC71','#F39C12','#E67E22','#E74C3C']}},
+],{title:'Building Foundation Damage Risk vs. Pavement Differential Settlement',
+    yaxis:{title:'Structural Damage Probability (%)',range:[0,100]},
+    xaxis:{title:'Differential Pavement Settlement'},
+    shapes:[{type:'line',xref:'x',yref:'y',x0:'10–25mm',y0:0,x1:'10–25mm',y1:100,
+        line:{color:'#E74C3C',width:2,dash:'dot'}}],
+    annotations:[{x:'25–50mm',y:60,text:'25mm threshold\n(Puppala 2011)',showarrow:true,arrowhead:2,ax:60,ay:0,font:{color:'#E74C3C',size:11}}],
+    ...bg,height:430},cfg);
+
+// ── ELECTRICAL: Cable Thermal ─────────────────────────
+Plotly.newPlot('electricalThermalPlot',[
+    {x:[20,25,30,35,40,45,50],y:[100,96,92,86,78,70,61],
+     type:'scatter',mode:'lines+markers',name:'XLPE Cable (90°C rated)',
+     line:{color:'#E74C3C',width:3},marker:{size:12}},
+    {x:[20,25,30,35,40,45,50],y:[100,94,88,80,70,59,47],
+     type:'scatter',mode:'lines+markers',name:'PVC Cable (75°C rated)',
+     line:{color:'#F39C12',width:3,dash:'dash'},marker:{size:12}}
+],{title:'Underground Cable Ampacity vs. Soil Temperature',
+    xaxis:{title:'Soil Temperature (°C)',range:[18,52]},
+    yaxis:{title:'Ampacity (% of rated)',range:[40,105]},
+    shapes:[{type:'rect',xref:'x',yref:'paper',x0:35,y0:0,x1:42,y1:1,fillcolor:'#E74C3C',opacity:0.1,line:{width:0}}],
+    annotations:[{x:38.5,y:82,text:'Nashville\ncondition zone',showarrow:false,font:{size:11,color:'#C0392B'}}],
+    ...bg,height:430},cfg);
+
+// ── ELECTRICAL: Demand Surge ──────────────────────────
+Plotly.newPlot('electricalDemandPlot',[
+    {x:['Baseline','Transport\n+1°C','Transport\n+3°C','Transport\n+5°C','Transport\n+8°C\n(UHI)'],
+     y:[100,103,109,115,128],name:'Peak Demand (% baseline)',type:'bar',
+     marker:{color:['#2ECC71','#F39C12','#E67E22','#E74C3C','#C0392B']}},
+    {x:['Baseline','Transport\n+1°C','Transport\n+3°C','Transport\n+5°C','Transport\n+8°C\n(UHI)'],
+     y:[100,97,93,88,83],name:'Cable Capacity (% rated)',type:'scatter',mode:'lines+markers',
+     line:{color:'#3498DB',width:3},marker:{size:12},yaxis:'y2'}
+],{title:'Peak Electrical Demand (↑) vs. Available Cable Capacity (↓)',
+    yaxis:{title:'Peak Demand (% baseline)',range:[90,135]},
+    yaxis2:{title:'Cable Capacity (% rated)',overlaying:'y',side:'right',range:[75,105]},
+    annotations:[{x:'Transport\n+8°C\n(UHI)',y:128,text:'54% excess demand\nover available capacity',
+        showarrow:true,arrowhead:2,ax:-80,ay:-30,font:{color:'#C0392B',size:11}}],
+    ...bg,height:430},cfg);
+
+// ── ELECTRICAL: Access Delays ─────────────────────────
+Plotly.newPlot('elecAccessPlot',[
+    {x:['Normal Roads','Fair Degradation','Poor Roads','Severe Degradation'],
+     y:[2.5,3.5,5.0,6.5],name:'Electrical Repair Time (hours)',type:'bar',
+     marker:{color:['#2ECC71','#F39C12','#E67E22','#E74C3C']}},
+],{title:'Electrical Repair Response Time vs. Road Condition',
+    yaxis:{title:'Average Repair Time (hours)',range:[0,8]},
+    xaxis:{title:'Road Degradation Level'},
+    shapes:[{type:'line',xref:'paper',yref:'y',x0:0,y0:2.5,x1:1,y1:2.5,line:{color:'#2ECC71',width:2,dash:'dot'}}],
+    annotations:[{x:1.5,y:2.7,text:'Normal baseline\n2–4 hrs',xref:'x',yref:'y',showarrow:false,font:{color:'#27ae60',size:11}}],
+    ...bg,height:430},cfg);
+
+// ── ECONOMICS: Breakdown (Pie) ────────────────────────
+Plotly.newPlot('economicBreakdownPlot',[{
+    labels:['Transport Direct','Water Systems','Building HVAC','Electrical Grid','Public Health','Cascade Amplification'],
+    values:[50000,15000,20000,10000,18000,15000],
+    type:'pie',
+    marker:{colors:['#FF6B6B','#4ECDC4','#45B7D1','#FFA07A','#9B59B6','#95A5A6']},
+    textinfo:'label+percent',
+    hovertemplate:'<b>%{label}</b><br>$%{value:,.0f}<br>%{percent}<extra></extra>'
+}],{title:'Cost Distribution — $128,000 Total (vs. $50,000 Transport-Only Estimate)',
+    height:450,paper_bgcolor:'#FDFCFB',font:{color:'#1A1A1A',family:'Source Serif 4,Georgia,serif'}},cfg);
+
+// ── ECONOMICS: Multiplier ─────────────────────────────
+Plotly.newPlot('economicMultiplierPlot',[
+    {x:['Transport\nOnly','+ Water','+ Buildings','+ Electrical','+ Public\nHealth','+ Cascade\nAmplification'],
+     y:[50000,65000,85000,95000,113000,128000],type:'bar',
+     marker:{color:['#3498DB','#4ECDC4','#45B7D1','#FFA07A','#9B59B6','#E74C3C']},
+     text:['$50K','$65K','$85K','$95K','$113K','$128K'],textposition:'outside'}
+],{title:'How Costs Compound — From Single-System to True Total',
+    yaxis:{title:'Cumulative Cost ($)',range:[0,155000]},
+    xaxis:{title:'Cost Components Added'},
+    shapes:[{type:'line',xref:'paper',yref:'y',x0:0,y0:50000,x1:1,y1:50000,
+        line:{color:'#3498DB',width:2,dash:'dot'}}],
+    annotations:[{x:2,y:53000,text:'Single-system\nestimate: $50K',xref:'x',yref:'y',showarrow:false,font:{color:'#3498DB',size:11}}],
+    ...bg,height:430},cfg);
+
+// ── ECONOMICS: Scenario Comparison ────────────────────
+Plotly.newPlot('scenarioPlot',[
+    {x:['Day 1','Day 3','Week 1','Week 2','Month 1','Month 2'],
+     y:[50000,120000,300000,500000,900000,1100000],
+     name:'Moderate Heat Event (33–36°C)',type:'scatter',mode:'lines+markers',
+     line:{color:'#F39C12',width:3},marker:{size:10}},
+    {x:['Day 1','Day 3','Week 1','Week 2','Month 1','Month 2'],
+     y:[80000,250000,700000,1400000,3200000,5000000],
+     name:'Extreme Heat Event (38–41°C)',type:'scatter',mode:'lines+markers',
+     fill:'tonexty',fillcolor:'rgba(231,76,60,0.15)',
+     line:{color:'#E74C3C',width:3},marker:{size:10}}
+],{title:'Cumulative System-Wide Cost — Moderate vs. Extreme Heat Event',
+    xaxis:{title:'Time Since Event Start'},
+    yaxis:{title:'Cumulative Cost ($)',tickformat:'$,.0f'},
+    annotations:[{x:'Month 2',y:5000000,text:'5× higher cost\nat extreme heat',
+        showarrow:true,arrowhead:2,ax:-80,ay:-30,font:{color:'#C0392B',size:12}}],
+    ...bg,height:450},cfg);
+
+// ── ECONOMICS: Timeline ───────────────────────────────
+Plotly.newPlot('timelinePlot',[    {x:['Day 1','Day 2-3','Week 2-4','Month 2-3','Month 3-6'],y:[8,15,30,45,30],
+     name:'Transport',type:'scatter',mode:'lines+markers',line:{color:'#FF6B6B',width:3},marker:{size:12}},
+    {x:['Day 1','Day 2-3','Week 2-4','Month 2-3','Month 3-6'],y:[0,5,20,35,25],
+     name:'Water',type:'scatter',mode:'lines+markers',line:{color:'#4ECDC4',width:3},marker:{size:12}},
+    {x:['Day 1','Day 2-3','Week 2-4','Month 2-3','Month 3-6'],y:[2,10,25,40,35],
+     name:'Buildings',type:'scatter',mode:'lines+markers',line:{color:'#45B7D1',width:3},marker:{size:12}},
+    {x:['Day 1','Day 2-3','Week 2-4','Month 2-3','Month 3-6'],y:[5,12,18,30,20],
+     name:'Electrical',type:'scatter',mode:'lines+markers',line:{color:'#FFA07A',width:3},marker:{size:12}},
+    {x:['Day 1','Day 2-3','Week 2-4','Month 2-3','Month 3-6'],y:[10,25,40,45,30],
+     name:'Public Health',type:'scatter',mode:'lines+markers',
+     line:{color:'#9B59B6',width:3,dash:'dash'},marker:{size:12},
+     fill:'none'}
+],{title:'Cascade Impact Timeline — Relative Severity by System',
+    xaxis:{title:'Time Since Heat Event'},
+    yaxis:{title:'System Stress Level (relative)',range:[0,55]},
+    ...bg,height:430,hovermode:'x unified'},cfg);
+// ── PUBLIC HEALTH: Mortality Risk ────────────────────
+Plotly.newPlot('phMortalityPlot',[
+    {x:['Baseline\n(No Cascade)','HVAC Failure\nOnly','EMS Delay\nOnly','Power Outage\nOnly','Full Cascade\n(All Failures)'],
+     y:[1.0,1.8,1.5,1.6,3.2],name:'Relative Mortality Risk',type:'bar',
+     marker:{color:['#2ECC71','#F39C12','#E67E22','#E74C3C','#8E44AD']},
+     text:['1.0×','1.8×','1.5×','1.6×','3.2×'],textposition:'outside'},
+    {x:['Baseline\n(No Cascade)','HVAC Failure\nOnly','EMS Delay\nOnly','Power Outage\nOnly','Full Cascade\n(All Failures)'],
+     y:[0,80,50,60,220],name:'Estimated Excess Deaths per 100K (Major Event)',
+     type:'scatter',mode:'lines+markers',
+     line:{color:'#C0392B',width:3},marker:{size:12},yaxis:'y2'}
+],{title:'Heat-Related Mortality Risk — Baseline vs. Infrastructure Cascade Scenarios',
+    barmode:'group',
+    yaxis:{title:'Relative Mortality Risk (1.0 = baseline)',range:[0,3.8]},
+    yaxis2:{title:'Excess Deaths per 100,000',overlaying:'y',side:'right',range:[0,270]},
+    annotations:[{x:'Full Cascade\n(All Failures)',y:3.2,text:'3.2× baseline risk\n(Chicago 1995 equivalent)',
+        showarrow:true,arrowhead:2,ax:-80,ay:-30,font:{color:'#8E44AD',size:11}}],
+    ...bg,height:450},cfg);
+
+// ── PUBLIC HEALTH: EMS Response ──────────────────────
+Plotly.newPlot('phEmsPlot',[
+    {x:['Good Roads\n(baseline)','Fair Degradation','Poor Roads','Severe\nDegradation','Extreme +\nHeat Event'],
+     y:[6.5,8.0,10.5,13.8,16.2],name:'EMS Response Time (minutes)',type:'bar',
+     marker:{color:['#2ECC71','#F39C12','#E67E22','#E74C3C','#8E44AD']}},
+    {x:['Good Roads\n(baseline)','Fair Degradation','Poor Roads','Severe\nDegradation','Extreme +\nHeat Event'],
+     y:[100,108,120,138,155],name:'Relative Cardiac Mortality Risk (%)',
+     type:'scatter',mode:'lines+markers',yaxis:'y2',
+     line:{color:'#C0392B',width:3},marker:{size:12}}
+],{title:'EMS Response Time vs. Road Condition — and Resulting Mortality Risk',
+    yaxis:{title:'EMS Response Time (minutes)',range:[0,20]},
+    yaxis2:{title:'Relative Cardiac Mortality Risk (%)',overlaying:'y',side:'right',range:[90,175]},
+    shapes:[{type:'line',xref:'paper',yref:'y',x0:0,y0:8,x1:1,y1:8,
+        line:{color:'#27AE60',width:2,dash:'dot'}}],
+    annotations:[
+        {x:0.4,y:8.4,text:'Nashville 8-min\nresponse target',xref:'paper',yref:'y',showarrow:false,font:{color:'#27AE60',size:10}},
+        {x:'Extreme +\nHeat Event',y:155,text:'+55% mortality risk\nvs. baseline',yref:'y2',
+            showarrow:true,arrowhead:2,ax:-70,ay:-30,font:{color:'#C0392B',size:11}}
+    ],
+    ...bg,height:450},cfg);
+
+// ── PUBLIC HEALTH: Vulnerable Population Risk ─────────
+Plotly.newPlot('phVulnerablePlot',[
+    {x:['General\nPopulation','Outdoor\nWorkers','Low-Income\nResidents','Elderly\n(65+)','Elderly +\nNo AC'],
+     y:[1.0,2.1,2.4,3.0,4.8],name:'Relative Heat Mortality Risk',type:'bar',
+     marker:{color:['#3498DB','#F39C12','#E67E22','#E74C3C','#8E44AD']},
+     text:['1.0×','2.1×','2.4×','3.0×','4.8×'],textposition:'outside'},
+    {x:['General\nPopulation','Outdoor\nWorkers','Low-Income\nResidents','Elderly\n(65+)','Elderly +\nNo AC'],
+     y:[700000,45000,180000,130000,28000],name:'Nashville Population in Group',
+     type:'scatter',mode:'markers',yaxis:'y2',
+     marker:{size:[20,10,15,15,9],color:'rgba(155,89,182,0.6)',line:{color:'#6C3483',width:2}}}
+],{title:'Relative Heat Mortality Risk by Population Group — Nashville',
+    barmode:'group',
+    yaxis:{title:'Relative Mortality Risk (1.0 = general population)',range:[0,5.5]},
+    yaxis2:{title:'Nashville Population in Group',overlaying:'y',side:'right',
+            tickformat:',',range:[0,900000]},
+    annotations:[{x:'Elderly +\nNo AC',y:4.8,text:'~28K residents\nat highest risk',
+        showarrow:true,arrowhead:2,ax:-70,ay:-25,font:{color:'#8E44AD',size:11}}],
+    ...bg,height:450},cfg);
+
+// ── PUBLIC HEALTH: Workforce Impact ──────────────────
+Plotly.newPlot('phWorkerPlot',[
+    {x:['Day 1','Day 2–3','Week 1','Week 2','Month 1'],
+     y:[2,6,12,18,14],name:'Transport Repair Crew Absences (%)',
+     type:'scatter',mode:'lines+markers',line:{color:'#FF6B6B',width:3},marker:{size:10}},
+    {x:['Day 1','Day 2–3','Week 1','Week 2','Month 1'],
+     y:[3,8,15,22,18],name:'Water/Electrical Crew Absences (%)',
+     type:'scatter',mode:'lines+markers',line:{color:'#4ECDC4',width:3},marker:{size:10}},
+    {x:['Day 1','Day 2–3','Week 1','Week 2','Month 1'],
+     y:[5,15,28,35,25],name:'Hospital Capacity Used by Heat Cases (%)',
+     type:'scatter',mode:'lines+markers',
+     line:{color:'#9B59B6',width:3,dash:'dash'},marker:{size:10},fill:'tozeroy',
+     fillcolor:'rgba(155,89,182,0.08)'}
+],{title:'Workforce Absenteeism &amp; Hospital Capacity — The Feedback on Infrastructure Recovery',
+    xaxis:{title:'Time Since Heat Event'},
+    yaxis:{title:'% Capacity Lost or Occupied',range:[0,42]},
+    shapes:[{type:'line',xref:'paper',yref:'y',x0:0,y0:30,x1:1,y1:30,
+        line:{color:'#E74C3C',width:2,dash:'dot'}}],
+    annotations:[{x:3,y:31,text:'30% hospital capacity\n= surge threshold',xref:'x',yref:'y',
+        showarrow:false,font:{color:'#E74C3C',size:10}}],
+    ...bg,height:430,hovermode:'x unified'},cfg);
+</script>
+</body>
+</html>
